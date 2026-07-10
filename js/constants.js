@@ -143,8 +143,9 @@
 
     // --- Touch input -----------------------------------------------------------------
     TOUCH_STEER_ZONE: 0.6,       // left fraction of the viewport = steering zone
-    TOUCH_DEADZONE_X: 10,        // px CSS; |dx| >= 10 -> steer -1/+1
-    TOUCH_THROTTLE_DY: 24,       // px CSS; dy <= -24 fast, dy >= +24 slow
+    TOUCH_DEADZONE_X: 28,        // px CSS; |dx| >= 28 ENGAGES steer -1/+1
+    TOUCH_STEER_RELEASE_X: 14,   // px CSS; steer RELEASES only when |dx| < 14 (hysteresis)
+    TOUCH_THROTTLE_DY: 36,       // px CSS; dy <= -36 fast, dy >= +36 slow
     CORNER_BTN: 24,              // logical px; invisible mute (TL) / pause (TR) hotspots
 
     // --- HUD layout (from visual-spec §9; screen px) -----------------------------------

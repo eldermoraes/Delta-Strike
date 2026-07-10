@@ -237,8 +237,9 @@ ajustar apenas espaçamento em branco no fim das linhas).
 
     // --- Touch input -----------------------------------------------------------------
     TOUCH_STEER_ZONE: 0.6,       // left fraction of the viewport = steering zone
-    TOUCH_DEADZONE_X: 10,        // px CSS; |dx| >= 10 -> steer -1/+1
-    TOUCH_THROTTLE_DY: 24,       // px CSS; dy <= -24 fast, dy >= +24 slow
+    TOUCH_DEADZONE_X: 28,        // px CSS; |dx| >= 28 ENGAGES steer -1/+1
+    TOUCH_STEER_RELEASE_X: 14,   // px CSS; steer RELEASES only when |dx| < 14 (hysteresis)
+    TOUCH_THROTTLE_DY: 36,       // px CSS; dy <= -36 fast, dy >= +36 slow
     CORNER_BTN: 24,              // logical px; invisible mute (TL) / pause (TR) hotspots
 
     // --- HUD layout (from visual-spec §9; screen px) -----------------------------------
@@ -758,7 +759,10 @@ Transições (funções privadas): `enterTitle()`, `startRun()` (score=0, lives=
 - **Teclado** (`e.code`, listeners em window; `preventDefault()` em setas/Space/Enter; ignorar `e.repeat` nos edges): ArrowLeft/Right → steer (ambas seguradas ⇒ 0); ArrowUp/Down → throttle (+1/−1; ambas ⇒ −1); Space → fire; Enter → startPressed; KeyP → pausePressed; KeyM → mutePressed.
 - **Touch** (listeners `{passive:false}` + `preventDefault()`):
   - Cantos (apenas `playing`/`paused`, testados no touchstart em coords LÓGICAS via bounding rect do canvas): top-left 24×24 ⇒ mutePressed; top-right 24×24 ⇒ pausePressed. Esses toques não viram direção/fogo.
-  - Zona de direção: toque iniciado com `clientX < innerWidth * 0.6`; o primeiro vira joystick (guarda `x0,y0`); `dx = x−x0`, `dy = y−y0` px CSS; steer = −1 se `dx ≤ −10`, +1 se `dx ≥ 10`, senão 0; throttle = +1 se `dy ≤ −24`, −1 se `dy ≥ +24`, senão 0. touchend/cancel zera. Toques extras na zona são ignorados.
+  - Zona de direção: toque iniciado com `clientX < innerWidth * 0.6`; o primeiro vira joystick (guarda `x0,y0`); `dx = x−x0`, `dy = y−y0` px CSS.
+    - Steer com HISTERESE (Revisão 2026-07-10, feedback de playtest mobile — "vira demais com um simples toque"): ENGATA −1/+1 quando `|dx| ≥ TOUCH_DEADZONE_X` (28); uma vez engatado, mantém o sinal enquanto `|dx| ≥ TOUCH_STEER_RELEASE_X` (14) e o sinal de `dx` não inverter; SOLTA (steer 0) quando `|dx| < 14`; se `dx` cruzar para o lado oposto além de 28, engata o novo sinal. Valores antigos (deadzone único de 10) revogados.
+    - Throttle sem histerese: +1 se `dy ≤ −TOUCH_THROTTLE_DY` (36), −1 se `dy ≥ +36`, senão 0 (24 revogado; mantém o steer mais fácil de engatar que o throttle).
+    - touchend/cancel zera steer e throttle. Toques extras na zona são ignorados.
   - Zona de fogo: ≥1 toque ativo iniciado com `clientX ≥ innerWidth * 0.6` ⇒ fire = true.
   - Qualquer touchstart ⇒ startPressed (consumido só em title/paused/gameover).
   - `mousedown` no canvas ⇒ startPressed.

@@ -53,6 +53,7 @@
 
     // touch steering (single joystick) + fire-zone touches
     var steerId = -1, steerX0 = 0, steerY0 = 0, steerDx = 0, steerDy = 0;
+    var steerLatch = 0;   // engaged steer sign (-1|0|1), hysteresis (interfaces §7.8)
     var fireIds = [];
 
     function onKeyDown(e) {
@@ -137,7 +138,7 @@
       for (i = 0; i < e.changedTouches.length; i++) {
         t = e.changedTouches[i];
         if (t.identifier === steerId) {
-          steerId = -1; steerDx = 0; steerDy = 0;
+          steerId = -1; steerDx = 0; steerDy = 0; steerLatch = 0;
         }
         idx = fireIds.indexOf(t.identifier);
         if (idx !== -1) fireIds.splice(idx, 1);
@@ -170,10 +171,20 @@
       else if (keyUp) kThrottle = 1;
 
       // Touch resolution (digital, from the joystick delta).
+      // Steer uses hysteresis (interfaces §7.8): ENGAGE at |dx| >= DEADZONE_X
+      // (28), then HOLD the latched sign while |dx| >= STEER_RELEASE_X (14)
+      // and dx keeps that sign; RELEASE otherwise. Crossing past DEADZONE_X on
+      // the opposite side re-engages with the new sign. Throttle: no hysteresis.
       var tSteer = 0, tThrottle = 0;
       if (steerId !== -1) {
-        if (steerDx <= -C.TOUCH_DEADZONE_X) tSteer = -1;
-        else if (steerDx >= C.TOUCH_DEADZONE_X) tSteer = 1;
+        if (steerDx >= C.TOUCH_DEADZONE_X) steerLatch = 1;
+        else if (steerDx <= -C.TOUCH_DEADZONE_X) steerLatch = -1;
+        else if (steerLatch !== 0 &&
+                 (Math.abs(steerDx) < C.TOUCH_STEER_RELEASE_X ||
+                  steerDx * steerLatch < 0)) {
+          steerLatch = 0;
+        }
+        tSteer = steerLatch;
         if (steerDy <= -C.TOUCH_THROTTLE_DY) tThrottle = 1;
         else if (steerDy >= C.TOUCH_THROTTLE_DY) tThrottle = -1;
       }
