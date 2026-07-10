@@ -1,6 +1,6 @@
 /* DELTA STRIKE — service worker */
 'use strict';
-var CACHE = 'delta-strike-v2';   // bump manual a cada release: -v2, -v3…
+var CACHE = 'delta-strike-v3';   // bump manual a cada release: -v2, -v3…
 var ASSETS = [
   './',
   './index.html',
@@ -18,8 +18,13 @@ var ASSETS = [
 
 self.addEventListener('install', function (e) {
   e.waitUntil(
-    caches.open(CACHE).then(function (c) { return c.addAll(ASSETS); })
-      .then(function () { return self.skipWaiting(); })
+    caches.open(CACHE).then(function (c) {
+      // cache:'reload' bypasses the HTTP cache so a new release never
+      // precaches stale assets (GitHub Pages serves max-age=600).
+      return c.addAll(ASSETS.map(function (u) {
+        return new Request(u, { cache: 'reload' });
+      }));
+    }).then(function () { return self.skipWaiting(); })
   );
 });
 

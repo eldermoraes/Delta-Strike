@@ -851,8 +851,13 @@ var ASSETS = [
 
 self.addEventListener('install', function (e) {
   e.waitUntil(
-    caches.open(CACHE).then(function (c) { return c.addAll(ASSETS); })
-      .then(function () { return self.skipWaiting(); })
+    caches.open(CACHE).then(function (c) {
+      // cache:'reload' bypasses the HTTP cache so a new release never
+      // precaches stale assets (GitHub Pages serves max-age=600).
+      return c.addAll(ASSETS.map(function (u) {
+        return new Request(u, { cache: 'reload' });
+      }));
+    }).then(function () { return self.skipWaiting(); })
   );
 });
 
@@ -877,6 +882,10 @@ self.addEventListener('fetch', function (e) {
 
 - **Cache-first estrito** com `ignoreSearch: true` (para `?seed=` funcionar offline).
 - Estratégia de update: bump de `CACHE` + qualquer mudança de arquivo ⇒ SW novo instala em background e assume no próximo load (skipWaiting + claim).
+- Revisão 2026-07-10: o precache do `install` usa `Request(u, { cache: 'reload' })`
+  para ignorar o cache HTTP do navegador na instalação — sem isso, um release
+  publicado dentro da janela de `max-age=600` do GitHub Pages podia precachear
+  assets velhos no cache novo.
 
 ### 13.3 Registro (no `index.html`, ver §15.1)
 
