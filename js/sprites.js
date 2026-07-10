@@ -138,16 +138,16 @@
       '..VVVVVVVVVVVVVVVVVVVV..'
     ]],
 
-    // Enemy jet — 16x8, VS §7.5. Nose to the right = moving right.
+    // Enemy jet — 16x8, VS §7.5. Nose points right, tail (fin) behind = moving right.
     jet: [[
-      '................',
-      '.........A......',
-      '..........AA....',
-      'AAAAAAAAAAAAAA..',
-      'BBBBBBBBBBBBBBBB',
-      'ZZZZZZZZZZZZZZ..',
-      '..........ZZ....',
-      '.........Z......'
+      '.AA.............',
+      '.AAA............',
+      '.AAAA...........',
+      '..BBBBBBBBBBBB..',
+      '..BBBBBBBBBBBBBB',
+      '..ZZZZZZZZZZZZ..',
+      '......ZZZZ......',
+      '.......ZZ.......'
     ]],
 
     // Fuel depot — 12x24, VS §7.6. F-U-E-L letters are hollow (transparent).

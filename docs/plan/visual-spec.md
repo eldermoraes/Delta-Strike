@@ -414,19 +414,25 @@ RRRRRRRRRRRRRRRRRRRRRRRR
 
 ### 7.5 Jato inimigo — 16×8
 
-Dardo com asas em seta, 3 tons de azul por linha (`A` claro em cima, `B` no
-meio, `Z` embaixo). Nariz à direita = voando para a direita; espelhar para a
-esquerda.
+Caça em visão lateral, 3 tons de azul (`A` claro na deriva, `B` na fuselagem,
+`Z` na barriga/asa). Elementos que garantem a leitura de avião: **deriva
+(cauda vertical) atrás**, fuselagem longa afilando em **nariz pontudo à
+frente** e **asa abaixo do centro**. Nariz à direita = voando para a direita;
+espelhar para a esquerda (cauda sempre atrás).
+
+> Revisão 2026-07-10: o desenho anterior ("dardo com asas em seta") lia como
+> seta, não como avião (bug reportado em playtest). Matriz substituída; mesmas
+> dimensões, legenda e âncoras — nenhum contrato afetado.
 
 ```
-................
-.........A......
-..........AA....
-AAAAAAAAAAAAAA..
-BBBBBBBBBBBBBBBB
-ZZZZZZZZZZZZZZ..
-..........ZZ....
-.........Z......
+.AA.............
+.AAA............
+.AAAA...........
+..BBBBBBBBBBBB..
+..BBBBBBBBBBBBBB
+..ZZZZZZZZZZZZ..
+......ZZZZ......
+.......ZZ.......
 ```
 
 ### 7.6 Depósito de combustível — 12×24, letras F-U-E-L vazadas
