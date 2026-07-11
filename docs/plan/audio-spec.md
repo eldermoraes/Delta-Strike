@@ -128,8 +128,8 @@ removê-la do array de vozes ativas. Nenhum nó pode vazar.
 |-----|---------------|
 | ENGINE (bus composto) | 0.22 (±0.03 do LFO) |
 | SHOT | 0.30 |
-| EXPLOSION_SMALL | 0.50 |
-| EXPLOSION_BIG (ruído) | 0.60 |
+| EXPLOSION_SMALL | 0.62 (rev. 2026-07-11; era 0.50) |
+| EXPLOSION_BIG (ruído) | 0.65 (rev. 2026-07-11; era 0.60) |
 | EXPLOSION_BIG (corpo 60 Hz) | 0.35 |
 | REFUEL (blip) | 0.22 |
 | FUEL BAIXO (alarme) | 0.18 |
@@ -299,7 +299,14 @@ osc (square) → g → sfxBus
 
 ## 6. EXPLOSION_SMALL — inimigo/depósito destruído
 
-One-shot polifônico. Rajada de ruído com o filtro fechando (o "puff" TIA).
+One-shot polifônico. Rajada de ruído com o filtro fechando (o "crunch" TIA —
+áspero e brilhante no ataque, fechando para o grave no decay).
+
+> Revisão 2026-07-11 (playtest mobile: "explosões inaudíveis"): o lowpass
+> original 800→200 Hz descartava ~96% da potência do ruído e deixava o resto
+> abaixo da resposta de alto-falante de celular (medido: RMS 4× menor que o
+> tiro após highpass de 700 Hz). Filtro reaberto para 3200→350 Hz e pico
+> 0.50→0.55 — também mais fiel ao ruído áspero do TIA numa TV.
 
 ### 6.1 Grafo
 
@@ -313,20 +320,25 @@ noiseSrc (buffer, loop) → lp (lowpass) → g → sfxBus
 |----|-----------|---------------|
 | `noiseSrc` | buffer / loop | `noiseBuffer` / `true` |
 | `lp` | type / Q | `'lowpass'` / 0.7 |
-| `lp` | frequency | 800 Hz em t0 |
+| `lp` | frequency | 4500 Hz em t0 |
 | `g` | gain | 0 em t0 |
 
 | Tempo (rel. t0) | Alvo | Método | Valor |
 |------------------|------|--------|-------|
-| 0 | lp.frequency | setValueAtTime | 800 |
-| +0.350 | lp.frequency | exponentialRampToValueAtTime | 200 |
+| 0 | lp.frequency | setValueAtTime | 4500 |
+| +0.350 | lp.frequency | exponentialRampToValueAtTime | 400 |
 | 0 | g.gain | setValueAtTime | 0 |
-| +0.005 | g.gain | linearRampToValueAtTime | 0.50 |
+| +0.005 | g.gain | linearRampToValueAtTime | 0.62 |
 | +0.350 | g.gain | exponentialRampToValueAtTime | 0.001 |
 | +0.350 | g.gain | setValueAtTime | 0 |
 
 - `noiseSrc.start(t0)`, `noiseSrc.stop(t0 + 0.40)`.
 - **Duração total: 400 ms** (decay audível de 350 ms).
+- Critério de aceite (offline render, cadeia master completa, highpass duplo
+  de 700 Hz simulando celular; métrica = RMS da **janela de 120 ms mais
+  forte**, comparável entre sons de durações diferentes): ≥ 1.0× o SHOT.
+  Medido na calibração de 2026-07-11: 1.18× ✓ (valores 4500→400 / 0.62 vêm
+  de varredura offline; 3200→350 / 0.55 ficou em 0.94× e foi revogado).
 
 ---
 
@@ -348,17 +360,23 @@ body (square)           → gBody         ─┼→ sfxBus
 |----|-----------|---------------|
 | `noiseSrc` | buffer / loop | `noiseBuffer` / `true` |
 | `lp` | type / Q | `'lowpass'` / 0.7 |
-| `lp` | frequency | 600 Hz em t0 |
+| `lp` | frequency | 2400 Hz em t0 |
 | `gNoise` | gain | 0 em t0 |
 
 | Tempo (rel. t0) | Alvo | Método | Valor |
 |------------------|------|--------|-------|
-| 0 | lp.frequency | setValueAtTime | 600 |
-| +0.700 | lp.frequency | exponentialRampToValueAtTime | 100 |
+| 0 | lp.frequency | setValueAtTime | 2400 |
+| +0.700 | lp.frequency | exponentialRampToValueAtTime | 200 |
 | 0 | gNoise.gain | setValueAtTime | 0 |
-| +0.008 | gNoise.gain | linearRampToValueAtTime | 0.60 |
+| +0.008 | gNoise.gain | linearRampToValueAtTime | 0.65 |
 | +0.700 | gNoise.gain | exponentialRampToValueAtTime | 0.001 |
 | +0.700 | gNoise.gain | setValueAtTime | 0 |
+
+> Revisão 2026-07-11 (mesma motivação do §6): lowpass 600→100 Hz reaberto para
+> 2400→200 Hz e pico 0.60→0.65. A camada de corpo (§7.3) fica INALTERADA — o
+> subgrave continua dando peso em alto-falantes capazes. Critério de aceite
+> (mesma métrica do §6, janela de 120 ms pós-highpass): ≥ 1.2× o SHOT.
+> Medido na calibração de 2026-07-11: 1.44× ✓ (estes valores já passam).
 
 - `noiseSrc.start(t0)`, `noiseSrc.stop(t0 + 0.75)`.
 
@@ -525,8 +543,8 @@ osc (square, 880 Hz) → g → sfxBus
 |---|-----|--------|--------|-------|------|---------|-----|
 | 1 | ENGINE | 2× square + noise loop + LFO 27 Hz | bandpass 400 Hz Q0.5 (só no ruído) | 40→90 Hz (f=40+25v), 2º osc em 2f | 0.22 ±0.03 | ∞ | singleton |
 | 2 | SHOT | square | — | 1400→400 Hz exp em 90 ms | 0.30 | 100 ms | poli (guarda 50 ms) |
-| 3 | EXPLOSION_SMALL | noise | lowpass 800→200 Hz Q0.7 | — | 0.50 | 400 ms | poli |
-| 4 | EXPLOSION_BIG | noise + square | lowpass 600→100 Hz Q0.7 | corpo 60→40 Hz | 0.60 + 0.35 | 750 ms | poli |
+| 3 | EXPLOSION_SMALL | noise | lowpass 4500→400 Hz Q0.7 (rev. 2026-07-11) | — | 0.62 | 400 ms | poli |
+| 4 | EXPLOSION_BIG | noise + square | lowpass 2400→200 Hz Q0.7 (rev. 2026-07-11) | corpo 60→40 Hz | 0.65 + 0.35 | 750 ms | poli |
 | 5 | REFUEL | square | — | 200+500·nível Hz por blip | 0.22 | 70 ms/blip, tick 100 ms | singleton retrigável |
 | 6 | FUEL BAIXO | square + LFO 2.7778 Hz | — | 800 Hz fixo, gate 180/180 ms | 0.18 | ∞ enquanto on | singleton on/off |
 | 7 | EXTRA_LIFE | 3× square | — | 523 / 659 / 784 Hz | 0.25/nota | 240 ms | poli |

@@ -277,12 +277,12 @@
     var lp = ctx.createBiquadFilter();
     lp.type = 'lowpass';
     lp.Q.value = 0.7;
-    lp.frequency.setValueAtTime(800, t0);
-    lp.frequency.exponentialRampToValueAtTime(200, t0 + 0.350);
+    lp.frequency.setValueAtTime(4500, t0);
+    lp.frequency.exponentialRampToValueAtTime(400, t0 + 0.350);
 
     var g = ctx.createGain();
     g.gain.setValueAtTime(0, t0);
-    g.gain.linearRampToValueAtTime(0.50, t0 + 0.005);
+    g.gain.linearRampToValueAtTime(0.62, t0 + 0.005);
     g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.350);
     g.gain.setValueAtTime(0, t0 + 0.350);
 
@@ -309,12 +309,12 @@
     var lp = ctx.createBiquadFilter();
     lp.type = 'lowpass';
     lp.Q.value = 0.7;
-    lp.frequency.setValueAtTime(600, t0);
-    lp.frequency.exponentialRampToValueAtTime(100, t0 + 0.700);
+    lp.frequency.setValueAtTime(2400, t0);
+    lp.frequency.exponentialRampToValueAtTime(200, t0 + 0.700);
 
     var gNoise = ctx.createGain();
     gNoise.gain.setValueAtTime(0, t0);
-    gNoise.gain.linearRampToValueAtTime(0.60, t0 + 0.008);
+    gNoise.gain.linearRampToValueAtTime(0.65, t0 + 0.008);
     gNoise.gain.exponentialRampToValueAtTime(0.001, t0 + 0.700);
     gNoise.gain.setValueAtTime(0, t0 + 0.700);
 

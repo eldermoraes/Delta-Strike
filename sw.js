@@ -1,6 +1,6 @@
 /* DELTA STRIKE — service worker */
 'use strict';
-var CACHE = 'delta-strike-v4';   // bump manual a cada release: -v2, -v3…
+var CACHE = 'delta-strike-v5';   // bump manual a cada release: -v2, -v3…
 var ASSETS = [
   './',
   './index.html',
