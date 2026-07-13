@@ -1,76 +1,90 @@
 # DELTA STRIKE
 
-Um shooter de rolagem vertical estilo Atari 2600, jogável no browser e no
-celular, 100% offline. Homenagem original ao clássico gênero *river shooter*
-de 1982: toda a arte, sons e código deste projeto foram criados do zero —
-nenhum asset foi extraído de ROMs ou de terceiros.
+A vertical-scrolling river shooter in the Atari 2600 style — playable in the
+browser and on your phone, 100% offline. An original tribute to the classic
+1982 *river shooter* genre: every bit of the art, sound and code in this project
+was built from scratch — no assets were extracted from ROMs or third parties.
 
-![Ícone](icons/icon-192.png)
+![Icon](icons/icon-192.png)
 
-## Como jogar
+## ▶ Play online
 
-Sirva a pasta por HTTP (qualquer servidor estático) e abra no browser:
+**https://eldermoraes.github.io/Delta-Strike/** — nothing to install, nothing to
+download. (This is also the link in the repository's **About** section.)
+
+After the first load the game runs completely offline and can be installed as a
+PWA (portrait, full screen) via your browser's *Install* / *Add to Home Screen*.
+
+## Controls
+
+### Keyboard
+
+| Key | Action |
+|---|---|
+| ← → | steer |
+| ↑ ↓ | speed up / brake |
+| Space | fire (hold for autofire) |
+| Enter | start |
+| P | pause |
+| M | mute |
+
+### Touch (phone)
+
+- **Left zone (60%)**: drag to steer; drag up/down to speed up/brake.
+- **Right zone (40%)**: tap to fire.
+- **Top corners** (during play): left = mute, right = pause.
+- Tap anywhere to start.
+
+## Rules
+
+- Destroy ships (30), helicopters (60), fuel depots (80), jets (100) and
+  bridges (500 — checkpoint).
+- Refuel by flying over the `FUEL` depots (destroying one scores points, but
+  removes the fuel...). Empty tank = you go down.
+- Colliding with a bank, island, enemy or bridge costs you 1 plane. You start
+  with 3 in reserve and earn 1 every 10,000 points (max 9).
+- The river is the same in every game (fixed seed, like the classic) and gets
+  narrower and more crowded with each section.
+- They say that at 1,000,000 points the scoreboard... changes. `!!!!!!`
+
+## Run locally
+
+Serve the folder over HTTP (any static server) and open it in a browser:
 
 ```bash
 python3 -m http.server 8321
 # http://localhost:8321
 ```
 
-> O service worker exige contexto seguro (`localhost` ou HTTPS). Depois do
-> primeiro load, o jogo funciona completamente offline e pode ser instalado
-> como PWA (portrait, tela cheia).
+> The service worker requires a secure context (`localhost` or HTTPS). No build
+> step, no dependencies, no frameworks — it's just plain files.
 
-### Controles — teclado
-
-| Tecla | Ação |
-|---|---|
-| ← → | dirigir |
-| ↑ ↓ | acelerar / frear |
-| Espaço | atirar (segure para autofire) |
-| Enter | iniciar |
-| P | pausar |
-| M | mudo |
-
-### Controles — touch (celular)
-
-- **Zona esquerda (60%)**: arraste para dirigir; arraste para cima/baixo para
-  acelerar/frear.
-- **Zona direita (40%)**: toque para atirar.
-- **Cantos superiores** (durante o jogo): esquerdo = mudo, direito = pausa.
-- Toque em qualquer lugar para começar.
-
-## Regras
-
-- Destrua navios (30), helicópteros (60), depósitos (80), jatos (100) e
-  pontes (500 — checkpoint).
-- Reabasteça sobrevoando os depósitos `FUEL` (destruí-los dá pontos, mas
-  some o combustível...). Tanque vazio = queda.
-- Colidir com margens, ilhas, inimigos ou pontes = perde 1 avião. Você começa
-  com 3 de reserva e ganha 1 a cada 10.000 pontos (máx. 9).
-- O rio é sempre o mesmo em toda partida (seed fixa, como no clássico) e fica
-  mais estreito e mais povoado a cada seção.
-- Dizem que aos 1.000.000 de pontos o placar... muda. `!!!!!!`
-
-## Estrutura
+## Project structure
 
 ```
-index.html            página + ordem de carga dos módulos
-style.css             centralização, letterbox, pixel-perfect
+index.html            page + module load order
+style.css             centering, letterbox, pixel-perfect
 manifest.webmanifest  PWA
-sw.js                 cache-first offline (delta-strike-v1)
-js/constants.js       DS.C — todas as constantes + paleta (fonte da verdade)
-js/sprites.js         DS.Sprites — pixel-maps e fontes, pré-render + flip
-js/audio.js           DS.Audio — SFX 100% sintetizados (Web Audio, estilo TIA)
-js/river.js           DS.River — geração determinística do rio por seção
-js/entities.js        DS.Entities — player, inimigos, mísseis, colisões
-js/game.js            DS.Game — loop 60 Hz, estados, HUD, input, escala
-tools/make_icons.py   gerador dos ícones PNG (stdlib apenas)
-docs/plan/            especificações completas (design, visual, áudio,
-                      arquitetura, contratos de interface)
+sw.js                 cache-first offline (delta-strike-vN)
+js/constants.js       DS.C — every constant + palette (source of truth)
+js/sprites.js         DS.Sprites — pixel-maps and fonts, pre-render + flip
+js/audio.js           DS.Audio — 100% synthesized SFX (Web Audio, TIA-style)
+js/river.js           DS.River — deterministic per-section river generation
+js/entities.js        DS.Entities — player, enemies, missiles, collisions
+js/game.js            DS.Game — 60 Hz loop, states, HUD, input, scaling
+tools/make_icons.py   PNG icon generator (stdlib only)
+docs/plan/            full specs (design, visual, audio, architecture,
+                      interface contracts)
 ```
 
-Sem dependências, sem build. `?seed=N` na URL gera um rio alternativo (debug).
+`?seed=N` in the URL generates an alternative river (debug only).
 
-## Licença
+## Original assets
 
-Apache 2.0 — veja [LICENSE](LICENSE).
+All of the art, sound and code are 100% original. Nothing was extracted from
+ROMs, and the 1982 game's trademark is not used — the product name is
+DELTA STRIKE.
+
+## License
+
+Apache 2.0 — see [LICENSE](LICENSE).

@@ -1,75 +1,74 @@
-# DELTA STRIKE — build-tasks.md (plano para 6 agentes paralelos)
+# DELTA STRIKE — build-tasks.md (plan for 6 parallel agents)
 
-Seis agentes implementam o jogo em paralelo, **sem comunicação entre si**. Cada
-agente é DONO EXCLUSIVO dos arquivos da sua tarefa e não toca em nenhum outro.
-A integração funciona porque todos aderem 100% a
-`docs/plan/interfaces.md` — o contrato final, que **vence** qualquer divergência
-com os demais docs de plano.
+Six agents implement the game in parallel, **with no communication between
+them**. Each agent is the EXCLUSIVE OWNER of the files in its task and does not
+touch any other. Integration works because everyone adheres 100% to
+`docs/plan/interfaces.md` — the final contract, which **takes precedence** over
+any divergence with the other plan docs.
 
 ---
 
-## REGRAS GLOBAIS (valem para todas as tarefas)
+## GLOBAL RULES (apply to all tasks)
 
-1. **Não tocar em arquivo de outra tarefa.** Nem "só um ajustinho". Se algo
-   parecer errado no contrato, implemente o contrato mesmo assim (a
-   inconsistência se resolve na fase de integração, não na sua tarefa).
-2. **interfaces.md é lei.** Ordem de leitura obrigatória: (a)
-   `docs/plan/interfaces.md` INTEIRO; (b) as seções da spec de origem listadas
-   na sua tarefa. Onde a spec de origem divergir do interfaces.md, o
-   interfaces.md vence (a §0 dele lista as resoluções R1–R33).
-3. **Código e strings do jogo em inglês.** Comentários em inglês. Nomes de API,
-   sprites e sons EXATAMENTE como no interfaces.md — não renomear, não
-   "melhorar".
-4. **Sem dependências externas.** Zero fetch/CDN/fonte externa/imagem externa/
-   biblioteca. Zero build step. Scripts clássicos (IIFE), não ES modules.
-5. **Proibido:** `console.log` (permitidos `console.error`/`console.warn` para
-   falhas reais), `Math.random()`, `setInterval`, `setTimeout` para lógica de
-   jogo, `alert`, qualquer global além de `window.DS`.
-6. Esqueleto de todo `js/*.js`:
+1. **Do not touch another task's file.** Not even "just a tiny tweak". If
+   something seems wrong in the contract, implement the contract anyway (the
+   inconsistency is resolved in the integration phase, not in your task).
+2. **interfaces.md is law.** Mandatory reading order: (a)
+   `docs/plan/interfaces.md` IN FULL; (b) the sections of the source spec listed
+   in your task. Where the source spec diverges from interfaces.md, interfaces.md
+   wins (its §0 lists the resolutions R1–R33).
+3. **Game code and strings in English.** Comments in English. API, sprite, and
+   sound names EXACTLY as in interfaces.md — do not rename, do not "improve".
+4. **No external dependencies.** Zero fetch/CDN/external font/external image/
+   library. Zero build step. Classic scripts (IIFE), not ES modules.
+5. **Forbidden:** `console.log` (`console.error`/`console.warn` allowed for
+   real failures), `Math.random()`, `setInterval`, `setTimeout` for game logic,
+   `alert`, any global other than `window.DS`.
+6. Skeleton of every `js/*.js`:
    ```js
    /* DELTA STRIKE — <module>.js */
    (function () {
      'use strict';
      window.DS = window.DS || {};
      // ...
-     DS.ModuleName = { /* API pública */ };
+     DS.ModuleName = { /* public API */ };
    })();
    ```
-7. **Definir só o próprio namespace.** Nenhum efeito colateral no load além de
-   definir `DS.X` (exceções explícitas: nenhuma — até `DS.Audio.init` só roda
-   quando o game chamar).
-8. Coordenadas, unidades e fórmula de desenho: interfaces.md §1 (mundo com
-   worldY crescendo PARA CIMA; `sx = round(x) − (w>>1)`,
+7. **Define only your own namespace.** No side effects on load other than
+   defining `DS.X` (explicit exceptions: none — even `DS.Audio.init` only runs
+   when the game calls it).
+8. Coordinates, units, and drawing formula: interfaces.md §1 (world with
+   worldY growing UPWARD; `sx = round(x) − (w>>1)`,
    `sy = (camInt − round(y)) − (h>>1) + 1`).
-9. Para testar seu módulo isolado antes da integração: crie um HTML/console de
-   teste FORA do repositório (ou em pasta temporária não commitada), colando o
-   `constants.js` literal do interfaces.md §2. **Não commite arquivos de
-   teste.**
-10. Critério de pronto de toda tarefa: arquivo(s) da tarefa completos, zero
-    erros de sintaxe (`node --check js/arquivo.js` passa), critérios de aceite
-    da tarefa verificados.
+9. To test your module in isolation before integration: create an HTML/console
+   test OUTSIDE the repository (or in a non-committed temporary folder), pasting
+   the literal `constants.js` from interfaces.md §2. **Do not commit test
+   files.**
+10. Definition of done for every task: task file(s) complete, zero syntax
+    errors (`node --check js/arquivo.js` passes), task acceptance criteria
+    verified.
 
 ---
 
-## T1 — Shell (página, PWA, ícones)
+## T1 — Shell (page, PWA, icons)
 
-**Arquivos (donos exclusivos):** `index.html`, `style.css`,
+**Files (exclusive owners):** `index.html`, `style.css`,
 `manifest.webmanifest`, `sw.js`, `tools/make_icons.py`, `icons/icon-192.png`,
-`icons/icon-512.png` (gerados pelo script).
+`icons/icon-512.png` (generated by the script).
 
-**Ler:** interfaces.md §8 (e §3 para entender o boot); architecture.md §13, §15;
-visual-spec.md §2 e §12.
+**Read:** interfaces.md §8 (and §3 to understand the boot); architecture.md §13,
+§15; visual-spec.md §2 and §12.
 
-**Fazer:**
-1. `index.html`: esqueleto EXATO do interfaces.md §8.1 (head da architecture
-   §15.1 + os 3 divs de hint + os 6 scripts na ordem + script inline de
-   load/SW). Nada além disso.
-2. `style.css`: architecture §15.2 + a regra `#hint-keys` do interfaces §8.2.
+**Do:**
+1. `index.html`: EXACT skeleton from interfaces.md §8.1 (head from architecture
+   §15.1 + the 3 hint divs + the 6 scripts in order + inline load/SW script).
+   Nothing beyond that.
+2. `style.css`: architecture §15.2 + the `#hint-keys` rule from interfaces §8.2.
 3. `manifest.webmanifest`: verbatim architecture §13.1.
-4. `sw.js`: verbatim architecture §13.2 (cache `delta-strike-v1`; a lista
-   ASSETS não inclui `sw.js`, `tools/`, `docs/`).
-5. `tools/make_icons.py`: transcrever o código abaixo (normativo) e RODAR
-   `python3 tools/make_icons.py` para gerar e commitar os 2 PNGs.
+4. `sw.js`: verbatim architecture §13.2 (cache `delta-strike-v1`; the ASSETS
+   list does not include `sw.js`, `tools/`, `docs/`).
+5. `tools/make_icons.py`: transcribe the code below (normative) and RUN
+   `python3 tools/make_icons.py` to generate and commit the 2 PNGs.
 
 ```python
 #!/usr/bin/env python3
@@ -137,304 +136,313 @@ if __name__ == '__main__':
     main()
 ```
 
-**Critérios de aceite:**
-- [ ] `python3 tools/make_icons.py` gera os 2 PNGs; ambos abrem em visualizador
-      (assinatura PNG válida) com fundo azul-rio, colunas verdes e jato amarelo.
-- [ ] `index.html` referencia exatamente os 6 js na ordem
+**Acceptance criteria:**
+- [ ] `python3 tools/make_icons.py` generates the 2 PNGs; both open in a viewer
+      (valid PNG signature) with river-blue background, green columns, and yellow
+      jet.
+- [ ] `index.html` references exactly the 6 js in the order
       constants→sprites→audio→river→entities→game.
-- [ ] `manifest.webmanifest` é JSON válido (`python3 -m json.tool`).
-- [ ] `node --check sw.js` passa; ASSETS lista os 12 caminhos da architecture
-      §13.2 e nada mais.
-- [ ] Servindo a pasta (`python3 -m http.server`), a página abre sem 404 de
-      css/manifest/ícones (os js dos outros agentes podem 404 durante o
-      desenvolvimento paralelo — ok).
-- [ ] Canvas centralizado em fundo preto; página não rola nem dá zoom no mobile
-      (`touch-action:none`, `user-scalable=no`).
+- [ ] `manifest.webmanifest` is valid JSON (`python3 -m json.tool`).
+- [ ] `node --check sw.js` passes; ASSETS lists the 12 paths from architecture
+      §13.2 and nothing more.
+- [ ] Serving the folder (`python3 -m http.server`), the page opens without 404s
+      for css/manifest/icons (the other agents' js may 404 during parallel
+      development — ok).
+- [ ] Canvas centered on a black background; the page does not scroll or zoom on
+      mobile (`touch-action:none`, `user-scalable=no`).
 
-**Armadilhas de integração:**
-- NÃO adicionar elementos extras ao HTML (o game.js procura por `#screen`,
-  `#hint-left`, `#hint-right`, `#hint-keys` — ids exatos).
-- NÃO esconder os hints via CSS por conta própria além do especificado: quem
-  controla exibição é o game.js. O CSS só define aparência e a classe `hidden`.
-- `sw.js` na raiz (escopo `./`); registro só via o script inline especificado.
-- Não cachear `sw.js` dentro do próprio cache.
+**Integration pitfalls:**
+- Do NOT add extra elements to the HTML (game.js looks for `#screen`,
+  `#hint-left`, `#hint-right`, `#hint-keys` — exact ids).
+- Do NOT hide the hints via CSS on your own beyond what is specified: game.js is
+  the one that controls display. The CSS only defines appearance and the
+  `hidden` class.
+- `sw.js` at the root (scope `./`); registration only via the specified inline
+  script.
+- Do not cache `sw.js` inside the cache itself.
 
 ---
 
 ## T2 — Sprites (`js/sprites.js`)
 
-**Ler:** interfaces.md §1, §2 (PALETTE), §4; visual-spec.md §0, §1, §3.2, §5.3
-(matriz da ponte), §5.4, §7 (todas as matrizes), §8 (fontes).
+**Read:** interfaces.md §1, §2 (PALETTE), §4; visual-spec.md §0, §1, §3.2, §5.3
+(bridge matrix), §5.4, §7 (all matrices), §8 (fonts).
 
-**Fazer:**
-1. Dados privados: pixel-maps VERBATIM do visual-spec para os 15 sprites da
-   tabela interfaces §4.2 (`player`, `playerBoom`, `missile`, `heli`, `ship`,
+**Do:**
+1. Private data: pixel-maps VERBATIM from the visual-spec for the 15 sprites in
+   the interfaces §4.2 table (`player`, `playerBoom`, `missile`, `heli`, `ship`,
    `jet`, `fuel`, `bridge`, `bridgeFire`, `explosion`, `debris`, `lifeIcon`,
-   `house`, `tree`, `half`) + minifonte 3×5 (A–Z, 0–9 do VS §8.2 **mais** o
-   glifo `!` do interfaces §4.3) + fonte grande 8×10 (dígitos 0–9 e `!` do VS
+   `house`, `tree`, `half`) + 3×5 minifont (A–Z, 0–9 from VS §8.2 **plus** the
+   `!` glyph from interfaces §4.3) + large 8×10 font (digits 0–9 and `!` from VS
    §8.1).
-2. `bridge`: linhas 0 e 15 = padrão `SSSS....` do VS §5.3; linhas 1..14 = cores
-   sólidas da tabela do VS §5.3. `bridgeFire` = mesma matriz com trocas
+2. `bridge`: rows 0 and 15 = `SSSS....` pattern from VS §5.3; rows 1..14 = solid
+   colors from the VS §5.3 table. `bridgeFire` = same matrix with swaps
    `C→Y`, `D→G`, `G→P`.
-3. Cores APENAS via legenda letra→chave do interfaces §4.3 e `DS.C.PALETTE`.
-   Nenhum hex literal no arquivo.
-4. `init()` pré-renderiza cada frame (e a versão espelhada) em canvas
-   offscreen; API exata: `draw(ctx,name,frame,sx,sy,flip)`, `size`,
+3. Colors ONLY via the letter→key legend from interfaces §4.3 and `DS.C.PALETTE`.
+   No literal hex in the file.
+4. `init()` pre-renders each frame (and the mirrored version) on an offscreen
+   canvas; exact API: `draw(ctx,name,frame,sx,sy,flip)`, `size`,
    `frameCount`, `drawText(ctx,text,x,y,colorKey,scale)`,
    `textWidth(text,scale)`, `drawBig(ctx,text,x,y)` (interfaces §4.1).
 
-**Critérios de aceite** (com constants.js de teste colado do interfaces §2):
-- [ ] `DS.Sprites.init()` roda sem erro; `size('player')` → `{w:14,h:12}`;
+**Acceptance criteria** (with the test constants.js pasted from interfaces §2):
+- [ ] `DS.Sprites.init()` runs without error; `size('player')` → `{w:14,h:12}`;
       `size('bridge')` → `{w:64,h:16}`; `frameCount('explosion')` → 3;
       `frameCount('heli')` → 2.
-- [ ] Desenho de teste de cada sprite num canvas 160×210 escalado: silhuetas
-      conferem com as matrizes; letras F-U-E-L do depósito são VAZADAS (fundo
-      aparece); `flip=true` espelha heli/ship/jet.
-- [ ] `drawText(ctx,'DELTA STRIKE',10,20,'YELLOW',3)` ocupa 141 px de largura
+- [ ] Test drawing of each sprite on a scaled 160×210 canvas: silhouettes match
+      the matrices; the F-U-E-L letters of the depot are HOLLOW (the background
+      shows through); `flip=true` mirrors heli/ship/jet.
+- [ ] `drawText(ctx,'DELTA STRIKE',10,20,'YELLOW',3)` occupies 141 px of width
       (`textWidth('DELTA STRIKE',3) === 141`).
-- [ ] `drawBig` com `'0123456789!'` desenha 11 glifos com avanço 10.
-- [ ] Nenhuma cor fora de `DS.C.PALETTE`; nenhum alpha parcial.
+- [ ] `drawBig` with `'0123456789!'` draws 11 glyphs with advance 10.
+- [ ] No color outside `DS.C.PALETTE`; no partial alpha.
 
-**Armadilhas de integração:**
-- Dimensões da tabela §4.2 são contrato: entities/game usam `size()` para
-  hitbox e centralização. Um pixel a mais numa matriz quebra colisão.
-- `draw` recebe TOP-LEFT já arredondado — não recentralizar nem arredondar de
-  novo dentro do sprites.js.
-- Player tem 1 frame só (a decisão "3 frames de bank" foi descartada — R1).
-- `drawText` precisa aceitar `colorKey`/`scale` omitidos (defaults YELLOW / 1).
+**Integration pitfalls:**
+- The §4.2 table dimensions are a contract: entities/game use `size()` for the
+  hitbox and centering. One extra pixel in a matrix breaks collision.
+- `draw` receives the TOP-LEFT already rounded — do not re-center or round again
+  inside sprites.js.
+- Player has only 1 frame (the "3 bank frames" decision was dropped — R1).
+- `drawText` must accept `colorKey`/`scale` omitted (defaults YELLOW / 1).
 
 ---
 
-## T3 — Áudio (`js/audio.js`)
+## T3 — Audio (`js/audio.js`)
 
-**Ler:** interfaces.md §1.5, §3 (passo 4), §5; audio-spec.md INTEIRO (é a spec
-normativa da síntese).
+**Read:** interfaces.md §1.5, §3 (step 4), §5; audio-spec.md IN FULL (it is the
+normative synthesis spec).
 
-**Fazer:** implementar o audio-spec por completo com estes overrides do
+**Do:** implement the audio-spec in full with these overrides from
 interfaces.md:
-- Chave de persistência do mute: `DS.C.MUTED_KEY` (`'ds.muted'`) — NÃO
+- Mute persistence key: `DS.C.MUTED_KEY` (`'ds.muted'`) — NOT
   `'ds_muted'`.
-- API pública exatamente a do interfaces §5.1 (inclui `unlock()` público e
-  idempotente; os listeners internos de gesto chamam-no).
-- Constantes de jogo (`FUEL_LOW_FRAC`, cadência do refuelTick) NÃO vivem aqui:
-  audio.js não lê estado do jogo, só executa chamadas.
+- Public API exactly as in interfaces §5.1 (includes a public and idempotent
+  `unlock()`; the internal gesture listeners call it).
+- Game constants (`FUEL_LOW_FRAC`, refuelTick cadence) do NOT live here:
+  audio.js does not read game state, it only executes calls.
 
-**Critérios de aceite** (página de teste local com constants.js colado):
-- [ ] Antes de qualquer gesto: todas as funções são no-op sem erro e NENHUM
-      AudioContext existe.
-- [ ] Após 1 clique/tecla: `startEngine()` produz ronco grave contínuo;
-      `setEngineSpeed(0/1/2)` muda o pitch (40/65/90 Hz + harmônico 2f);
-      `stopEngine()` faz fade ~80 ms.
-- [ ] `shoot()` = "tsiu" 100 ms (1400→400 Hz); chamadas com <50 ms de intervalo
-      são ignoradas; `explosionSmall()` ~400 ms; `explosionBig()` ~750 ms com
-      subgrave; `refuelTick(0)`→`refuelTick(1)` sobe de ~200 a ~700 Hz;
-      `lowFuelAlarm(true)` bipa 800 Hz em 180/180 ms e `(false)` para;
-      `extraLife()` arpejo 523/659/784; `uiStart()` blip 880 Hz.
-- [ ] `setPaused(true)` congela TUDO (motor e alarme inclusive);
-      `setPaused(false)` retoma do ponto.
-- [ ] `setMuted(true)` silencia em <20 ms sem clique; sobrevive a reload
-      (localStorage `ds.muted`); try/catch em localStorage.
-- [ ] 200 disparos seguidos: contagem de AudioNodes estável (teto de 8 vozes,
-      disconnect em `onended`) — sem vazamento.
+**Acceptance criteria** (local test page with constants.js pasted):
+- [ ] Before any gesture: all functions are no-ops without error and NO
+      AudioContext exists.
+- [ ] After 1 click/key: `startEngine()` produces a continuous low rumble;
+      `setEngineSpeed(0/1/2)` changes the pitch (40/65/90 Hz + 2f harmonic);
+      `stopEngine()` fades ~80 ms.
+- [ ] `shoot()` = "tsiu" 100 ms (1400→400 Hz); calls less than 50 ms apart are
+      ignored; `explosionSmall()` ~400 ms; `explosionBig()` ~750 ms with
+      sub-bass; `refuelTick(0)`→`refuelTick(1)` rises from ~200 to ~700 Hz;
+      `lowFuelAlarm(true)` beeps 800 Hz at 180/180 ms and `(false)` stops it;
+      `extraLife()` arpeggio 523/659/784; `uiStart()` blip 880 Hz.
+- [ ] `setPaused(true)` freezes EVERYTHING (engine and alarm included);
+      `setPaused(false)` resumes from where it left off.
+- [ ] `setMuted(true)` silences in <20 ms with no click; survives reload
+      (localStorage `ds.muted`); try/catch on localStorage.
+- [ ] 200 shots in a row: stable AudioNodes count (ceiling of 8 voices,
+      disconnect on `onended`) — no leak.
 
-**Armadilhas de integração:**
-- Os nomes ARQ `play('shot')`/`startLoop('engine')` estão REVOGADOS (R7) — se
-  você implementá-los, o entities/game não vai chamá-los.
-- Listeners de unlock: `pointerdown`, `touchend`, `keydown` com
-  `capture:true`, removidos após o unlock; `visibilitychange` permanece.
-- Nunca usar `setTimeout` para envelope; só automação de AudioParam.
-- `exponentialRampToValueAtTime` não aceita 0 → terminar em 0.001 e cravar 0.
-- Ganho de toda voz começa em 0 (`setValueAtTime(0, t0)`) para não estalar.
+**Integration pitfalls:**
+- The ARCH names `play('shot')`/`startLoop('engine')` are REVOKED (R7) — if
+  you implement them, entities/game will not call them.
+- Unlock listeners: `pointerdown`, `touchend`, `keydown` with
+  `capture:true`, removed after the unlock; `visibilitychange` stays.
+- Never use `setTimeout` for the envelope; only AudioParam automation.
+- `exponentialRampToValueAtTime` does not accept 0 → end at 0.001 and pin to 0.
+- Every voice's gain starts at 0 (`setValueAtTime(0, t0)`) so it doesn't click.
 
 ---
 
-## T4 — Rio (`js/river.js`)
+## T4 — River (`js/river.js`)
 
-**Ler:** interfaces.md §1, §2 (constantes GEN/DIFFICULTY), §6; game-design.md §9
-e §10 (contexto; onde divergir, interfaces vence — ver R3, R6, R17, R22, R23,
-R24); visual-spec.md §5.1, §5.2 (estrada).
+**Read:** interfaces.md §1, §2 (GEN/DIFFICULTY constants), §6; game-design.md §9
+and §10 (context; where they diverge, interfaces wins — see R3, R6, R17, R22,
+R23, R24); visual-spec.md §5.1, §5.2 (road).
 
-**Fazer:**
-1. Geração por seção com `DS.U.mulberry32(DS.U.sectionSeed(seed, i))`, cache,
-   ordem de consumo EXATA do interfaces §6.2 (geometria → decoração →
-   depósitos → inimigos → jatos, com as contagens fixas de rolls por item).
-2. Geometria quantizada (§6.2.1): chunks 0/149 forçados `{48,112}`; zona segura
-   0..11; segmentos 12..130; convergência 131..148.
-3. Spawns (§6.2.3–6.2.6) e decoração (§6.2.2) com os invariantes de §6.4.
-4. `render(ctx, camInt)` conforme §6.3 (linhas de terra/água, faixa de estrada
-   de 16 linhas por ponte, decoração via `DS.Sprites.draw`).
-5. API exata do §6.1.
+**Do:**
+1. Per-section generation with `DS.U.mulberry32(DS.U.sectionSeed(seed, i))`,
+   cache, EXACT consumption order from interfaces §6.2 (geometry → decoration →
+   depots → enemies → jets, with the fixed roll counts per item).
+2. Quantized geometry (§6.2.1): chunks 0/149 forced `{48,112}`; safe zone
+   0..11; segments 12..130; convergence 131..148.
+3. Spawns (§6.2.3–6.2.6) and decoration (§6.2.2) with the §6.4 invariants.
+4. `render(ctx, camInt)` per §6.3 (land/water lines, 16-line road strip per
+   bridge, decoration via `DS.Sprites.draw`).
+5. Exact API from §6.1.
 
-**Critérios de aceite** (console, com constants.js de teste):
+**Acceptance criteria** (console, with test constants.js):
 - [ ] `DS.River.init(DS.C.DEFAULT_SEED)`; `channelAt(0)` → `[{xl:48,xr:112}]`;
-      `channelAt(60)` → canal 104 centrado; `channelAt(1200)` → `[{48,112}]`.
-- [ ] Varredura `for y in 0..12000`: todo intervalo tem `xl<xr`, bordas
-      múltiplas de 4, largura múltipla de 8, dentro de `[8,152]`; entre chunks
-      consecutivos nenhuma borda muda mais que 8 px (e só muda 8 no caso WIDEN
-      bloqueado); canais de ilha ≥ 28 px cada; ilhas só onde rio ≥ 88.
-- [ ] `JSON.stringify(DS.River.spawns(3))` idêntico entre dois reloads (mesma
-      seed) e diferente com `init(42)`.
-- [ ] `spawns(i≥1)[0].type === 'bridge'` com `y === i*1200`; nenhum spawn de
-      entidade nos chunks 0..11 nem 131..149; depósitos: span x ±6 é água em
-      TODOS os chunks cobertos; ships só em intervalos ≥ 48 px.
-- [ ] Contagens por seção batem com `DIFFICULTY[min(i,7)]` (menos os pulados
-      por falta de espaço, que devem ser raros nas seções 0–3).
-- [ ] `render` num canvas de teste com camInt=161: rio azul, margens
-      escadinha, sem estrada visível; com camInt=1210: faixa de estrada
-      cinza/amarela alinhada e canal 64 px.
-- [ ] `channelAt` chamado 2× para o mesmo y retorna o MESMO array (===).
+      `channelAt(60)` → channel 104 centered; `channelAt(1200)` → `[{48,112}]`.
+- [ ] Sweep `for y in 0..12000`: every interval has `xl<xr`, edges
+      multiples of 4, width a multiple of 8, within `[8,152]`; between
+      consecutive chunks no edge changes more than 8 px (and only changes 8 in
+      the blocked WIDEN case); island channels ≥ 28 px each; islands only where
+      the river is ≥ 88.
+- [ ] `JSON.stringify(DS.River.spawns(3))` identical between two reloads (same
+      seed) and different with `init(42)`.
+- [ ] `spawns(i≥1)[0].type === 'bridge'` with `y === i*1200`; no entity spawn
+      in chunks 0..11 or 131..149; depots: x span ±6 is water in ALL covered
+      chunks; ships only in intervals ≥ 48 px.
+- [ ] Per-section counts match `DIFFICULTY[min(i,7)]` (minus those skipped for
+      lack of space, which should be rare in sections 0–3).
+- [ ] `render` on a test canvas with camInt=161: blue river, stair-step banks,
+      no visible road; with camInt=1210: gray/yellow road strip aligned and a
+      64 px channel.
+- [ ] `channelAt` called 2× for the same y returns the SAME array (===).
 
-**Armadilhas de integração:**
-- O PRNG é mulberry32 por seção (R6) — NÃO o LFSR do game-design.
-- QUALQUER consumo extra/condicional de rng fora da receita quebra o
-  determinismo do respawn. Rolls "sempre consumidos" são sempre consumidos,
-  mesmo quando o item é pulado.
-- Arrays retornados são cacheados: nunca retornar cópias novas por chamada
-  (custo) nem deixar o caller mutar (documentado; não precisa congelar).
-- Cor da margem por seção: `sectionAt(worldY) % 2` (par = GRASS_A) — avaliada
-  POR LINHA de mundo, não por câmera.
-- A estrada usa `camInt` inteiro: nunca desenhar a estrada a partir de
-  `cameraY` float (desalinharia da ponte do entities).
-- `sectionAt` de y negativo → 0 (clamp); `channelAt` de y negativo → linha 0.
+**Integration pitfalls:**
+- The PRNG is per-section mulberry32 (R6) — NOT the game-design LFSR.
+- ANY extra/conditional rng consumption outside the recipe breaks respawn
+  determinism. Rolls that are "always consumed" are always consumed, even when
+  the item is skipped.
+- Returned arrays are cached: never return new copies per call (cost) nor let
+  the caller mutate them (documented; no need to freeze).
+- Per-section bank color: `sectionAt(worldY) % 2` (even = GRASS_A) — evaluated
+  PER world LINE, not per camera.
+- The road uses the integer `camInt`: never draw the road from the float
+  `cameraY` (it would misalign from the entities bridge).
+- `sectionAt` of negative y → 0 (clamp); `channelAt` of negative y → line 0.
 
 ---
 
-## T5 — Entidades (`js/entities.js`)
+## T5 — Entities (`js/entities.js`)
 
-**Ler:** interfaces.md §1, §2, §6.1/6.2.6 (contrato com River), §7.1, §7.3–7.5,
-§7.9; game-design.md §5–§8, §12 (contexto; interfaces vence — ver R1–R5, R11,
-R12, R21, R23, R28); visual-spec.md §7.7 (âncoras de explosão).
+**Read:** interfaces.md §1, §2, §6.1/6.2.6 (contract with River), §7.1, §7.3–7.5,
+§7.9; game-design.md §5–§8, §12 (context; interfaces wins — see R1–R5, R11,
+R12, R21, R23, R28); visual-spec.md §7.7 (explosion anchors).
 
-**Fazer:**
-1. Estado interno: `player`, `enemies[]`, `missiles[]`, `bridges{}`,
+**Do:**
+1. Internal state: `player`, `enemies[]`, `missiles[]`, `bridges{}`,
    `explosions[]`, `debris[]`, `pending[]`, `nextSection`, `hooks`.
-2. API exata do interfaces §7.1 (SEM `setPlayerVisible` — foi removida).
-3. Update na ordem normativa §7.4 (spawning → player → tiro → mísseis →
-   inimigos → culling → colisões → animações).
-4. Explosões/destroços/flicker de ponte conforme §7.5; render na ordem
+2. Exact API from interfaces §7.1 (WITHOUT `setPlayerVisible` — it was removed).
+3. Update in the normative order §7.4 (spawning → player → shot → missiles →
+   enemies → culling → collisions → animations).
+4. Explosions/debris/bridge flicker per §7.5; render in the order
    `bridges → fuel → ship/heli → jet → debris → missiles → player →
-   explosions`, usando a fórmula única de desenho (§1.3) e `flip` para
+   explosions`, using the single drawing formula (§1.3) and `flip` for
    `dir === -1`.
-5. Chamadas de áudio DIRETAS apenas: `DS.Audio.shoot()`,
-   `DS.Audio.explosionSmall()`, `DS.Audio.explosionBig()` (esta só para ponte).
+5. DIRECT audio calls only: `DS.Audio.shoot()`,
+   `DS.Audio.explosionSmall()`, `DS.Audio.explosionBig()` (the latter only for
+   the bridge).
 
-**Critérios de aceite** (harness de console com constants.js + stubs simples de
-Sprites/Audio/River conforme contratos — ou os módulos reais se prontos):
-- [ ] `startRun(27)`: player em (80, 27), speed 60, alive.
-- [ ] 600 updates com `{steer:0,throttle:0,fire:false}`: `player.y ≈ 27+600·1`
-      (60 px/s), nenhum erro; com `throttle:1` a speed rampa a 150 sem
-      ultrapassar; com `throttle:-1` cai a 30 e nunca abaixo.
-- [ ] `fire:true` contínuo: 1º míssil no tick do input; nunca 2 mísseis
-      simultâneos; novo tiro só após o anterior sumir E cooldown 0.18 s;
-      míssil anda `(420+speed)` px/s em worldY e herda steer em x.
-- [ ] Colisões: mover o player contra `channelAt` estreitado → morre 'bank'
-      (3 linhas de amostragem); sobrepor depósito → `onRefuel` a cada tick e
-      NÃO morre; míssil sobre inimigo → some, explosão criada, `onScore(30/60/
-      80/100)`, `explosionSmall`; míssil na ponte → `onScore(500)`,
-      `onBridgeDestroyed(b)`, `explosionBig`, flicker 32 ticks e depois some.
-- [ ] Ship/heli móvel ricocheteia a 2 px da borda do intervalo; jet cruza a
-      tela sobre a terra e é removido fora de x∈[−10,170].
-- [ ] `respawn(1227)`: limpa inimigos/mísseis; ponte 1 destruída NÃO volta;
-      entidades da seção 1 re-instanciam à frente conforme o scroll.
-- [ ] `killPlayer` duas vezes no mesmo tick → 1 chamada de `onPlayerDeath`.
+**Acceptance criteria** (console harness with constants.js + simple stubs of
+Sprites/Audio/River per the contracts — or the real modules if ready):
+- [ ] `startRun(27)`: player at (80, 27), speed 60, alive.
+- [ ] 600 updates with `{steer:0,throttle:0,fire:false}`: `player.y ≈ 27+600·1`
+      (60 px/s), no error; with `throttle:1` the speed ramps to 150 without
+      exceeding it; with `throttle:-1` it drops to 30 and never below.
+- [ ] `fire:true` continuous: 1st missile on the input tick; never 2 missiles
+      simultaneously; a new shot only after the previous one disappears AND
+      cooldown 0.18 s; the missile travels `(420+speed)` px/s in worldY and
+      inherits steer in x.
+- [ ] Collisions: move the player into a narrowed `channelAt` → dies 'bank'
+      (3 sampling lines); overlap a depot → `onRefuel` every tick and does NOT
+      die; missile over an enemy → disappears, explosion created,
+      `onScore(30/60/80/100)`, `explosionSmall`; missile on the bridge →
+      `onScore(500)`, `onBridgeDestroyed(b)`, `explosionBig`, flicker 32 ticks
+      and then disappears.
+- [ ] A moving ship/heli ricochets 2 px from the interval edge; the jet crosses
+      the screen over land and is removed outside x∈[−10,170].
+- [ ] `respawn(1227)`: clears enemies/missiles; destroyed bridge 1 does NOT come
+      back; section 1 entities re-instantiate ahead as the scroll advances.
+- [ ] `killPlayer` twice in the same tick → 1 call to `onPlayerDeath`.
 
-**Armadilhas de integração:**
-- **worldY cresce PARA CIMA**: "à frente do player" = y MAIOR. Culling é
+**Integration pitfalls:**
+- **worldY grows UPWARD**: "ahead of the player" = LARGER y. Culling is
   `y < cameraBottom − 16`.
-- Usar `sy = (camInt − round(y)) − (h>>1) + 1` — o `+1` é obrigatório (alinha
-  a ponte com a estrada do river.js).
-- Míssil NÃO morre em terra (R4). Não portar a regra da architecture.
-- Player tem hitbox 12×10 (14×12 − 1 px por lado) e o sprite não inclina (R1).
-- Inimigo que mata o player por contato explode SEM pontos.
-- `bridges` NÃO é limpo em `respawn` — é a memória de checkpoint do jogo.
-- Depósito destruído continua contando explosão/debris mas não reabastece.
-- Nenhuma chamada a `DS.Audio` além das 3 listadas (motor/alarme/refuel/morte
-  são do game — R31, §5.3).
-- speedMult usa a seção DA ENTIDADE (`sectionAt(e.y)`), não a do player.
+- Use `sy = (camInt − round(y)) − (h>>1) + 1` — the `+1` is mandatory (it aligns
+  the bridge with the river.js road).
+- The missile does NOT die over land (R4). Do not port the architecture rule.
+- Player has a 12×10 hitbox (14×12 − 1 px per side) and the sprite does not
+  tilt (R1).
+- An enemy that kills the player by contact explodes with NO points.
+- `bridges` is NOT cleared on `respawn` — it is the game's checkpoint memory.
+- A destroyed depot still counts explosion/debris but does not refuel.
+- No call to `DS.Audio` other than the 3 listed (engine/alarm/refuel/death
+  belong to the game — R31, §5.3).
+- speedMult uses the ENTITY's section (`sectionAt(e.y)`), not the player's.
 
 ---
 
 ## T6 — Game + Constants (`js/game.js`, `js/constants.js`)
 
-**Ler:** interfaces.md INTEIRO (você é o integrador); architecture.md §3, §4,
-§10–§12, §16 (contexto; interfaces vence — ver R2, R13, R14, R15, R16, R21,
-R25, R27, R29); game-design.md §3, §4, §6, §11 (contexto); visual-spec.md §9,
-§10, §11 (HUD e telas).
+**Read:** interfaces.md IN FULL (you are the integrator); architecture.md §3, §4,
+§10–§12, §16 (context; interfaces wins — see R2, R13, R14, R15, R16, R21,
+R25, R27, R29); game-design.md §3, §4, §6, §11 (context); visual-spec.md §9,
+§10, §11 (HUD and screens).
 
-**Fazer:**
-1. `js/constants.js`: **transcrever VERBATIM** o bloco do interfaces.md §2
-   (DS.C + DS.U). Nenhuma alteração de valor/nome.
+**Do:**
+1. `js/constants.js`: **transcribe VERBATIM** the block from interfaces.md §2
+   (DS.C + DS.U). No change of value/name.
 2. `js/game.js`:
-   - `DS.Game.init()` com a sequência de boot do interfaces §3 (try/catch +
+   - `DS.Game.init()` with the boot sequence from interfaces §3 (try/catch +
      `console.error` + re-throw).
-   - Loop rAF + timestep fixo (architecture §3.2: acumulador, clamp
+   - rAF loop + fixed timestep (architecture §3.2: accumulator, clamp
      `MAX_FRAME_DELTA`, `MAX_STEPS`, render 1×/frame).
-   - Máquina de estados e renders por estado: interfaces §7.6; update de
-     playing: §7.7; hooks: §7.3.
-   - `renderHUD` exato (§7.6, coords de `DS.C.HUD`).
-   - Submódulo `Input` (§7.8): teclado + multi-touch digital 60/40 + hotspots
-     de canto + edges consumidos no poll.
-   - Resize (architecture §12.1: escala inteira em px físicos via dpr,
-     fallback fracionário, `imageSmoothingEnabled=false` re-setado).
-   - Matriz de áudio (§5.3) — o game é o único a chamar
+   - State machine and per-state renders: interfaces §7.6; playing update:
+     §7.7; hooks: §7.3.
+   - Exact `renderHUD` (§7.6, `DS.C.HUD` coords).
+   - `Input` submodule (§7.8): keyboard + digital 60/40 multi-touch + corner
+     hotspots + edges consumed on poll.
+   - Resize (architecture §12.1: integer scale in physical px via dpr,
+     fractional fallback, `imageSmoothingEnabled=false` re-set).
+   - Audio matrix (§5.3) — the game is the only one to call
      startEngine/stopEngine/setEngineSpeed/refuelTick/lowFuelAlarm/extraLife/
-     uiStart/setMuted/setPaused e o `explosionBig()` da morte do player.
-   - Persistência `ds.hiscore` (gameover e ao cravar 1.000.000) com try/catch.
-   - Hints: touch → mostra `#hint-left/right` na 1ª entrada em playing (some
-     no 1º gesto correspondente ou após 6 s = 360 ticks) e esconde
-     `#hint-keys`; sem touch → esconde `#hint-left/right`, mantém
+     uiStart/setMuted/setPaused and the `explosionBig()` of the player's death.
+   - `ds.hiscore` persistence (gameover and on hitting 1.000.000) with try/catch.
+   - Hints: touch → shows `#hint-left/right` on the 1st entry into playing
+     (disappears on the 1st corresponding gesture or after 6 s = 360 ticks) and
+     hides `#hint-keys`; no touch → hides `#hint-left/right`, keeps
      `#hint-keys`.
-   - `visibilitychange` → auto-pause em playing.
-   - Propriedades públicas de leitura e `DS.Game.cheat.invincible`.
+   - `visibilitychange` → auto-pause in playing.
+   - Public read properties and `DS.Game.cheat.invincible`.
 
-**Critérios de aceite** (com todos os módulos presentes; se algum faltar, use
-stub mínimo local NÃO commitado):
-- [ ] `python3 -m http.server` → título com logo (141 px), chamada piscando
-      1 Hz, `HI 0`, HUD com score 0/vidas 3/ponteiro em F.
-- [ ] Enter inicia: blip + motor; setas dirigem; ↑/↓ mudam pitch do motor;
-      espaço atira (1 míssil, autofire segurando); P pausa (texto `PAUSE`
-      piscando, áudio congelado); M muta e mostra `M` no HUD; página nunca
-      rola.
-- [ ] Fuel cai ~1.3/s; abaixo de 25 soa alarme; encostar na margem → boom 48
-      ticks + 30 invisível → respawn no início da seção com tanque cheio, sem
-      texto, sem piscar; 3 mortes extras → gameover com score piscando e vidas
-      0; Enter (após 1 s) → título; hi-score atualizado e persistido.
-- [ ] Destruir a ponte: +500, checkpoint avança; morrer depois → respawn na
-      seção nova; a ponte destruída não reaparece.
-- [ ] Vida extra exatamente ao cruzar 10.000 (jingle; dígito de vidas +1, máx
-      9). Score exibido sem zeros à esquerda, alinhado à direita em x=104.
-- [ ] `?seed=42`: dois reloads → rio/spawns idênticos (`DS.River.spawns(3)`).
-- [ ] Touch (emulação DevTools): arrastar na esquerda dirige (deadzone 10 px)
-      e acelera/freia (±24 px); tocar na direita atira; os dois simultâneos;
-      cantos superiores pausam/mutam; tap inicia no título.
-- [ ] Aba oculta 30 s → auto-pause; volta sem salto de tempo.
-- [ ] Zero `console.log`; `DS.Game.state/score/lives/fuel/tick` visíveis no
+**Acceptance criteria** (with all modules present; if any is missing, use a
+minimal local stub NOT committed):
+- [ ] `python3 -m http.server` → title with logo (141 px), prompt blinking
+      1 Hz, `HI 0`, HUD with score 0/lives 3/pointer at F.
+- [ ] Enter starts: blip + engine; arrows steer; ↑/↓ change the engine pitch;
+      space fires (1 missile, autofire while held); P pauses (`PAUSE` text
+      blinking, audio frozen); M mutes and shows `M` in the HUD; the page never
+      scrolls.
+- [ ] Fuel drops ~1.3/s; below 25 the alarm sounds; touching the bank → boom 48
+      ticks + 30 invisible → respawn at the start of the section with a full
+      tank, no text, no blinking; 3 more deaths → gameover with the score
+      blinking and lives 0; Enter (after 1 s) → title; hi-score updated and
+      persisted.
+- [ ] Destroy the bridge: +500, checkpoint advances; die afterwards → respawn in
+      the new section; the destroyed bridge does not reappear.
+- [ ] Extra life exactly when crossing 10.000 (jingle; lives digit +1, max
+      9). Score displayed without leading zeros, right-aligned at x=104.
+- [ ] `?seed=42`: two reloads → identical river/spawns (`DS.River.spawns(3)`).
+- [ ] Touch (DevTools emulation): dragging on the left steers (deadzone 10 px)
+      and accelerates/brakes (±24 px); tapping on the right fires; both at once;
+      the top corners pause/mute; tap starts on the title.
+- [ ] Hidden tab 30 s → auto-pause; returns with no time jump.
+- [ ] Zero `console.log`; `DS.Game.state/score/lives/fuel/tick` visible in the
       console.
 
-**Armadilhas de integração:**
-- constants.js é TRANSCRIÇÃO, não interpretação. Rode um diff mental contra o
-  interfaces §2 antes de finalizar.
-- `camInt = Math.round(cameraY)` calculado 1× no render e passado a
-  `River.render` e `Entities.render` — nunca passar o float.
-- Ordem no tick: `Entities.update` PRIMEIRO, depois câmera, depois dreno de
-  fuel (o refuel do hook acontece dentro do update — a ordem garante que
-  reabastecer no tanque vazio vence a morte).
-- Decremento de vidas: UMA vez, no fim de `dying`
+**Integration pitfalls:**
+- constants.js is a TRANSCRIPTION, not an interpretation. Run a mental diff
+  against interfaces §2 before finalizing.
+- `camInt = Math.round(cameraY)` computed 1× in the render and passed to
+  `River.render` and `Entities.render` — never pass the float.
+- Order in the tick: `Entities.update` FIRST, then camera, then fuel drain
+  (the hook's refuel happens inside the update — the order guarantees that
+  refueling on an empty tank beats death).
+- Lives decrement: ONCE, at the end of `dying`
   (`lives > 0 ? (lives--, respawn) : gameover`) — R21.
-- Morte: `lowFuelAlarm(false)` → `stopEngine()` → `explosionBig()` nesta ordem
-  (R31). Ao voltar de respawn: `startEngine()`.
-- Sem texto "GAME OVER" e sem "GET READY" (R13/R14).
-- `Space`/setas/Enter com `preventDefault`; ignorar `e.repeat` nos edges.
-- Não chamar `DS.Audio.unlock()` manualmente é ok (audio.js se destrava
-  sozinho), mas chamar também não quebra (idempotente).
-- Em `title`, NÃO chamar `Entities.render` (player ainda não existe).
+- Death: `lowFuelAlarm(false)` → `stopEngine()` → `explosionBig()` in this order
+  (R31). On returning from respawn: `startEngine()`.
+- No "GAME OVER" text and no "GET READY" (R13/R14).
+- `Space`/arrows/Enter with `preventDefault`; ignore `e.repeat` on the edges.
+- Not calling `DS.Audio.unlock()` manually is ok (audio.js unlocks on its own),
+  but calling it also doesn't break (idempotent).
+- In `title`, do NOT call `Entities.render` (the player does not exist yet).
 
 ---
 
-## Ordem de integração sugerida (após os 6 entregarem)
+## Suggested integration order (after all 6 deliver)
 
-1. Merge de tudo; `node --check` nos 6 js.
-2. Smoke test da architecture §17 (desktop, mobile, offline/PWA, determinismo,
-   escala).
-3. Ajustes de calibração SOMENTE via `DS.C` (fuel, dificuldade) e ganhos do
-   audio-spec §2.6 (ouvido em dispositivo real), preservando nomes/contratos.
+1. Merge everything; `node --check` on the 6 js.
+2. Smoke test from architecture §17 (desktop, mobile, offline/PWA, determinism,
+   scale).
+3. Calibration adjustments ONLY via `DS.C` (fuel, difficulty) and audio-spec
+   §2.6 gains (heard on a real device), preserving names/contracts.

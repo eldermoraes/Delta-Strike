@@ -1,330 +1,330 @@
 # DELTA STRIKE — Game Design Document
 
-**Versão:** 1.0 · **Idioma do doc:** pt-BR · **Código/identificadores:** inglês
-**Referência de design:** River Raid (Atari 2600, Activision, 1982, Carol Shaw) — *apenas como referência*. Nenhum asset, sprite, som ou dado é extraído do original. Todos os assets do Delta Strike são 100% originais, criados para evocar a mesma estética.
+**Version:** 1.0 · **Doc language:** en-US · **Code/identifiers:** English
+**Design reference:** River Raid (Atari 2600, Activision, 1982, Carol Shaw) — *reference only*. No asset, sprite, sound, or data is extracted from the original. All Delta Strike assets are 100% original, created to evoke the same aesthetic.
 
-Este documento é a fonte única de verdade de gameplay. **Todos os números estão decididos** — o implementador não deve tomar nenhuma decisão de design. Valores marcados **[VERIFICADO]** vêm do manual/documentação pública do original; valores marcados **[DERIVADO]** foram calibrados por nós para reproduzir a mesma sensação na resolução lógica 160×210.
+This document is the single source of truth for gameplay. **All numbers are decided** — the implementer must make no design decisions. Values marked **[VERIFIED]** come from the manual/public documentation of the original; values marked **[DERIVED]** were calibrated by us to reproduce the same feel at the 160×210 logical resolution.
 
-Fatos verificados em: manual da Activision (AtariAge), Wikipedia, guias de estratégia da Activision e wikis de retrogaming.
-
----
-
-## 1. Visão geral
-
-O jogador pilota um jato de ataque subindo um rio infinito visto de cima, com scroll vertical (o mundo desce na tela). Deve destruir alvos (navios, helicópteros, jatos, depósitos de combustível e pontes), administrar combustível reabastecendo ao sobrevoar depósitos, e não colidir com margens, ilhas, inimigos ou pontes. Pontes dividem o rio em **seções** e funcionam como **checkpoints**. A dificuldade cresce por seção. O jogo não tem fim: aos 1.000.000 de pontos o placar vira `!!!!!!` e congela — este é o "final" (easter egg fiel ao original) **[VERIFICADO]**.
-
-Critério de sucesso: quem jogou River Raid reconhece o Delta Strike imediatamente ao ver, ouvir e jogar.
+Facts verified from: the Activision manual (AtariAge), Wikipedia, Activision strategy guides, and retrogaming wikis.
 
 ---
 
-## 2. Tela, resolução e escala
+## 1. Overview
 
-- Resolução lógica: **160×210 px** (canvas offscreen), escalada para a tela com nearest-neighbor (`image-rendering: pixelated`), escala inteira quando couber, letterbox preto no restante. Portrait no celular.
-- **Playfield:** y = 0 a 161 (162 px de altura). O scroll acontece só aqui.
-- **HUD:** y = 162 a 209 (48 px de faixa inferior), estático. Layout na seção 13.
-- Loop lógico: timestep fixo **60 Hz** (`TICK_HZ = 60`); render via `requestAnimationFrame` com acumulador. Todas as velocidades abaixo estão em px/s da resolução lógica; a 60 Hz, 60 px/s = 1 px/frame.
+The player pilots an attack jet flying up an endless river seen from above, with vertical scroll (the world moves down the screen). They must destroy targets (ships, helicopters, jets, fuel depots, and bridges), manage fuel by refueling as they fly over depots, and avoid colliding with banks, islands, enemies, or bridges. Bridges divide the river into **sections** and act as **checkpoints**. Difficulty increases per section. The game has no end: at 1,000,000 points the scoreboard turns to `!!!!!!` and freezes — this is the "ending" (an easter egg faithful to the original) **[VERIFIED]**.
+
+Success criterion: anyone who has played River Raid recognizes Delta Strike immediately upon seeing, hearing, and playing it.
 
 ---
 
-## 3. Estados de jogo (máquina de estados em DS.Game)
+## 2. Screen, resolution, and scale
 
-| Estado | Entrada | Saída | Comportamento |
+- Logical resolution: **160×210 px** (offscreen canvas), scaled to the screen with nearest-neighbor (`image-rendering: pixelated`), integer scale where it fits, black letterbox for the rest. Portrait on phones.
+- **Playfield:** y = 0 to 161 (162 px tall). Scrolling happens only here.
+- **HUD:** y = 162 to 209 (48 px bottom band), static. Layout in section 13.
+- Logic loop: fixed timestep **60 Hz** (`TICK_HZ = 60`); render via `requestAnimationFrame` with an accumulator. All speeds below are in px/s of the logical resolution; at 60 Hz, 60 px/s = 1 px/frame.
+
+---
+
+## 3. Game states (state machine in DS.Game)
+
+| State | Entry | Exit | Behavior |
 |---|---|---|---|
-| `BOOT` | carga da página | assets prontos (imediato, tudo é gerado por código) | → `TITLE` |
-| `TITLE` | — | Enter / tap em qualquer lugar | Tela título (ver 3.1). Áudio destravado no primeiro gesto. |
-| `PLAYING` | start ou fim de `RESPAWN` | morte, pausa | Gameplay normal. |
-| `PAUSED` | tecla P, botão de pause touch, ou `visibilitychange` (aba oculta) | P / botão / tap no overlay | Congela lógica e render do playfield; overlay "PAUSE"; `AudioContext.suspend()`. |
-| `DYING` | colisão ou fuel = 0 | timer 1,0 s | Scroll parado, animação de explosão do player (seção 12.3), som de explosão. |
-| `RESPAWN` | fim de `DYING` com vidas > 0 | timer 1,2 s | Player reposicionado no checkpoint (seção 12.4), texto "GET READY" piscando no centro do playfield, scroll parado. → `PLAYING`. |
-| `GAME_OVER` | fim de `DYING` com vidas = 0 | Enter / tap (aceito após 1,0 s) | Playfield congelado e escurecido 50%, texto "GAME OVER" + score final centralizados. Atualiza hi-score. → `TITLE`. |
+| `BOOT` | page load | assets ready (immediate, everything is generated by code) | → `TITLE` |
+| `TITLE` | — | Enter / tap anywhere | Title screen (see 3.1). Audio unlocked on the first gesture. |
+| `PLAYING` | start or end of `RESPAWN` | death, pause | Normal gameplay. |
+| `PAUSED` | P key, touch pause button, or `visibilitychange` (tab hidden) | P / button / tap on the overlay | Freezes playfield logic and render; "PAUSE" overlay; `AudioContext.suspend()`. |
+| `DYING` | collision or fuel = 0 | 1.0 s timer | Scroll stopped, player explosion animation (section 12.3), explosion sound. |
+| `RESPAWN` | end of `DYING` with lives > 0 | 1.2 s timer | Player repositioned at the checkpoint (section 12.4), "GET READY" text blinking in the center of the playfield, scroll stopped. → `PLAYING`. |
+| `GAME_OVER` | end of `DYING` with lives = 0 | Enter / tap (accepted after 1.0 s) | Playfield frozen and darkened 50%, "GAME OVER" text + final score centered. Updates hi-score. → `TITLE`. |
 
-**Sem modo demo/attract** (decisão de escopo: o original também não tem demo; a tela título já cumpre o papel).
+**No demo/attract mode** (scope decision: the original has no demo either; the title screen already fills the role).
 
-### 3.1 Tela título
-Fundo preto. Conteúdo (fonte pixel própria, seção 13.5):
-- Logo **"DELTA STRIKE"** em letras pixel amarelas (`COLOR_SCORE`), 2 linhas se necessário, centrado, topo a y=48.
-- `HI-SCORE 000000` (valor do localStorage, seção 16) a y=100, branco.
-- `PRESS ENTER` (desktop) **e** `TAP TO START` (sempre exibir as duas linhas), y=130/140, piscando a 1 Hz (500 ms on / 500 ms off).
-- Rodapé y=196: `P PAUSE · M MUTE`, cinza.
-- Ao iniciar: som `start` (seção 15), mundo resetado com a **mesma seed fixa** — toda partida é idêntica, como no original **[VERIFICADO: o original usa LFSR com seed hard-coded; o mundo é o mesmo em toda execução]**.
+### 3.1 Title screen
+Black background. Content (custom pixel font, section 13.5):
+- **"DELTA STRIKE"** logo in yellow pixel letters (`COLOR_SCORE`), 2 lines if needed, centered, top at y=48.
+- `HI-SCORE 000000` (value from localStorage, section 16) at y=100, white.
+- `PRESS ENTER` (desktop) **and** `TAP TO START` (always show both lines), y=130/140, blinking at 1 Hz (500 ms on / 500 ms off).
+- Footer y=196: `P PAUSE · M MUTE`, gray.
+- On start: `start` sound (section 15), world reset with the **same fixed seed** — every playthrough is identical, as in the original **[VERIFIED: the original uses an LFSR with a hard-coded seed; the world is the same on every run]**.
 
 ---
 
-## 4. Controles
+## 4. Controls
 
-### 4.1 Desktop (teclado)
-| Tecla | Ação |
+### 4.1 Desktop (keyboard)
+| Key | Action |
 |---|---|
-| ← / → | Direção lateral (velocidade constante enquanto pressionada) |
-| ↑ | Throttle rápido (`SPEED_FAST`) enquanto pressionada |
-| ↓ | Throttle lento (`SPEED_SLOW`) enquanto pressionada |
-| (nenhuma ↑/↓) | Cruzeiro (`SPEED_CRUISE`) |
-| Espaço | Atirar (segurar = autofire, seção 7) |
+| ← / → | Lateral steering (constant speed while held) |
+| ↑ | Fast throttle (`SPEED_FAST`) while held |
+| ↓ | Slow throttle (`SPEED_SLOW`) while held |
+| (no ↑/↓) | Cruise (`SPEED_CRUISE`) |
+| Space | Fire (hold = autofire, section 7) |
 | Enter | Start (TITLE/GAME_OVER) |
-| P | Pausa/despausa |
-| M | Mudo liga/desliga (funciona em qualquer estado) |
+| P | Pause/unpause |
+| M | Mute on/off (works in any state) |
 
-↑ e ↓ simultâneos: ↓ vence. ← e → simultâneos: nenhum movimento lateral.
+↑ and ↓ simultaneously: ↓ wins. ← and → simultaneously: no lateral movement.
 
-### 4.2 Touch (multi-touch obrigatório)
-Zonas em coordenadas CSS da área visível do canvas:
-- **Zona de direção:** 60% esquerdos da tela. O primeiro toque que começa aqui vira o "joystick": guarda-se o ponto de origem; o deslocamento do dedo em relação à origem controla:
-  - dx ≤ −10 px CSS → esquerda; dx ≥ +10 → direita; entre −10 e +10 → sem lateral (deadzone).
-  - dy ≤ −24 px CSS → `SPEED_FAST`; dy ≥ +24 → `SPEED_SLOW`; senão cruzeiro.
-  - Controle é digital (3 estados por eixo), como o joystick original — sem analógico.
-- **Zona de fogo:** 40% direitos. Qualquer toque iniciado aqui = botão de fogo pressionado (autofire enquanto segurar). Multi-touch: direção e fogo simultâneos obrigatórios.
-- **Botões de canto** (desenhados no HUD do canvas, área de toque 24×24 px lógicos): pause no canto superior direito do playfield (ícone ▐▐), mute no canto superior esquerdo (ícone alto-falante). Toques iniciados nesses retângulos NÃO contam como direção/fogo.
-- `TITLE`/`GAME_OVER`: tap em qualquer lugar = start/voltar.
-- `touch-action: none` no canvas; prevenir scroll/zoom.
+### 4.2 Touch (multi-touch required)
+Zones in CSS coordinates of the canvas's visible area:
+- **Steering zone:** left 60% of the screen. The first touch that begins here becomes the "joystick": the origin point is stored; the finger's displacement relative to the origin controls:
+  - dx ≤ −10 px CSS → left; dx ≥ +10 → right; between −10 and +10 → no steering (deadzone).
+  - dy ≤ −24 px CSS → `SPEED_FAST`; dy ≥ +24 → `SPEED_SLOW`; otherwise cruise.
+  - Control is digital (3 states per axis), like the original joystick — no analog.
+- **Fire zone:** right 40%. Any touch started here = fire button pressed (autofire while held). Multi-touch: simultaneous steering and fire are required.
+- **Corner buttons** (drawn in the canvas HUD, 24×24 logical px touch area): pause at the top-right corner of the playfield (▐▐ icon), mute at the top-left corner (speaker icon). Touches started in these rectangles do NOT count as steering/fire.
+- `TITLE`/`GAME_OVER`: tap anywhere = start/return.
+- `touch-action: none` on the canvas; prevent scroll/zoom.
 
 ---
 
-## 5. Jogador (movimento e física)
+## 5. Player (movement and physics)
 
-- Sprite: **13×12 px** (L×A), 3 frames: nivelado, inclinado-esquerda, inclinado-direita (frame de banking exibido enquanto houver input lateral — fiel à animação de "bank" do original).
-- Posição vertical **fixa**: topo do sprite em y = **128** (ocupa 128–139). O plano nunca sobe/desce na tela; ↑/↓ mudam a velocidade de **scroll**.
-- Velocidades de scroll (mundo) **[DERIVADO** para reproduzir as 3 marchas do original; travessia do playfield em 5,4 s / 2,7 s / 1,08 s**]**:
-  - `SPEED_SLOW` = **30 px/s** (freio; velocidade mínima — **não existe parar**, fiel ao original)
-  - `SPEED_CRUISE` = **60 px/s** (padrão)
+- Sprite: **13×12 px** (W×H), 3 frames: level, banked-left, banked-right (banking frame shown while there is lateral input — faithful to the original's "bank" animation).
+- **Fixed** vertical position: top of the sprite at y = **128** (occupies 128–139). The plane never moves up/down on the screen; ↑/↓ change the **scroll** speed.
+- Scroll (world) speeds **[DERIVED** to reproduce the original's 3 gears; playfield traversal in 5.4 s / 2.7 s / 1.08 s**]**:
+  - `SPEED_SLOW` = **30 px/s** (brake; minimum speed — **stopping is impossible**, faithful to the original)
+  - `SPEED_CRUISE` = **60 px/s** (default)
   - `SPEED_FAST` = **150 px/s**
-- Transição de throttle em rampa rápida (quase instantânea, como no original): aceleração **240 px/s²**, desaceleração **300 px/s²**.
-- Velocidade lateral: **72 px/s** constante, independente do throttle. Sem inércia: solta a tecla, para na hora.
-- Borda de tela: x do player clampado em [**2**, **145**] (160 − 13 − 2). O clamp NÃO protege da margem do rio: se a margem invadir esse espaço, é colisão (morte).
-- O scroll nunca para durante `PLAYING` (nem sobre depósito). Para apenas em `DYING`, `RESPAWN`, `PAUSED`, `GAME_OVER`.
+- Throttle transition on a fast ramp (near-instant, as in the original): acceleration **240 px/s²**, deceleration **300 px/s²**.
+- Lateral speed: **72 px/s** constant, independent of throttle. No inertia: release the key and it stops instantly.
+- Screen edge: player's x clamped to [**2**, **145**] (160 − 13 − 2). The clamp does NOT protect against the river bank: if the bank intrudes into that space, it is a collision (death).
+- The scroll never stops during `PLAYING` (not even over a depot). It stops only in `DYING`, `RESPAWN`, `PAUSED`, `GAME_OVER`.
 
 ---
 
-## 6. Combustível
+## 6. Fuel
 
-- Capacidade: **100 unidades** = tanque cheio (F). HUD mostra E→F com ponteiro (seção 13.2).
-- Consumo: **1,3 u/s**, **constante no tempo, independente do throttle** **[VERIFICADO: o manual diz que o consumo independe da velocidade — voar rápido rende mais distância por tanque]**. Tanque cheio dura **≈ 77 s** (dentro da janela de 60–90 s do original) **[DERIVADO]**.
-- Reabastecimento: enquanto a AABB do player sobrepõe a AABB de um depósito: **+30 u/s** (e o consumo continua; líquido +28,7 u/s). Passar devagar reabastece mais — mesma lógica do original **[VERIFICADO]**.
-  - Sobreposição vertical = altura do depósito (26 px) + altura do player (12 px) = janela de 38 px: a `SPEED_SLOW` ≈ 1,27 s ≈ +38 u; a `SPEED_FAST` ≈ 0,25 s ≈ +7,6 u.
-  - Som de "ticks" subindo enquanto reabastece; "ding" duplo ao atingir 100 (seção 15).
-- Alarme de combustível: fuel < **25** u → som de sirene em loop (klaxon, seção 15) até subir de 25, morrer ou pausar **[VERIFICADO: alarme a 1/4 de tanque]**.
-- Fuel = 0 → morte imediata (estado `DYING`), mesmo sem colisão **[VERIFICADO]**. Se estiver sobre um depósito no instante em que chegaria a 0, o refuel vence (não morre).
-- Todo respawn e todo início de partida: tanque cheio (100) **[VERIFICADO]**.
-- Depósito destruído a tiro = **80 pts** e some (não reabastece mais). É permitido reabastecer sobrevoando e destruí-lo em seguida (truque clássico do original — manter possível).
-
----
-
-## 7. Tiro
-
-- Míssil: retângulo **2×6 px** branco (`COLOR_MISSILE`), nasce no nariz do player (x = centro do player − 1, y = topo do player − 6).
-- Velocidade: **420 px/s** para cima **[DERIVADO: cruza o playfield em ~0,3 s, como o tiro rápido do original]**. O míssil viaja em coordenadas de TELA (o scroll não o afeta).
-- **Máximo 1 míssil na tela** **[VERIFICADO: o original permite essencialmente um tiro por vez]**. Novo tiro só quando o anterior sair do playfield (y < −6) ou acertar algo.
-- Cooldown mínimo entre tiros: **180 ms** (mesmo que o míssil anterior tenha morrido antes).
-- Autofire: com o botão segurado, atira automaticamente sempre que permitido pelas duas regras acima.
-- **Míssil guiado** (fiel à chave de dificuldade B do original, a posição "novice" padrão): enquanto o míssil está em voo, ele herda o movimento lateral do player (soma ±72 px/s em x quando o player está se movendo lateralmente). Sem chave A — só existe o modo guiado.
-- O míssil ignora terreno (passa por cima de margens/ilhas, como no original). Colide apenas com entidades (seção 8) e pontes.
-- Cada alvo morre com **1 acerto** (incluindo a ponte).
+- Capacity: **100 units** = full tank (F). The HUD shows E→F with a pointer (section 13.2).
+- Consumption: **1.3 u/s**, **constant over time, independent of throttle** **[VERIFIED: the manual says consumption is independent of speed — flying fast yields more distance per tank]**. A full tank lasts **≈ 77 s** (within the original's 60–90 s window) **[DERIVED]**.
+- Refueling: while the player's AABB overlaps a depot's AABB: **+30 u/s** (and consumption continues; net +28.7 u/s). Passing slowly refuels more — same logic as the original **[VERIFIED]**.
+  - Vertical overlap = depot height (26 px) + player height (12 px) = a 38 px window: at `SPEED_SLOW` ≈ 1.27 s ≈ +38 u; at `SPEED_FAST` ≈ 0.25 s ≈ +7.6 u.
+  - Rising "tick" sound while refueling; double "ding" upon reaching 100 (section 15).
+- Fuel alarm: fuel < **25** u → looping siren sound (klaxon, section 15) until it rises above 25, death, or pause **[VERIFIED: alarm at 1/4 tank]**.
+- Fuel = 0 → immediate death (state `DYING`), even without a collision **[VERIFIED]**. If over a depot at the instant it would reach 0, the refuel wins (no death).
+- Every respawn and every game start: full tank (100) **[VERIFIED]**.
+- A depot destroyed by fire = **80 pts** and disappears (no longer refuels). It is allowed to refuel by flying over and then destroy it (a classic trick from the original — keep it possible).
 
 ---
 
-## 8. Inimigos e objetos
+## 7. Shooting
 
-Todas as entidades vivem em coordenadas de MUNDO e descem na tela com o scroll. AABB de colisão = sprite encolhido 1 px em cada lado.
+- Missile: white **2×6 px** rectangle (`COLOR_MISSILE`), spawns at the player's nose (x = player center − 1, y = player top − 6).
+- Speed: **420 px/s** upward **[DERIVED: crosses the playfield in ~0.3 s, like the original's fast shot]**. The missile travels in SCREEN coordinates (scroll does not affect it).
+- **Maximum 1 missile on screen** **[VERIFIED: the original essentially allows one shot at a time]**. A new shot only when the previous one leaves the playfield (y < −6) or hits something.
+- Minimum cooldown between shots: **180 ms** (even if the previous missile died earlier).
+- Autofire: with the button held, fires automatically whenever allowed by the two rules above.
+- **Guided missile** (faithful to the original's difficulty switch B, the default "novice" position): while the missile is in flight, it inherits the player's lateral movement (adds ±72 px/s in x when the player is moving laterally). No switch A — only the guided mode exists.
+- The missile ignores terrain (passes over banks/islands, as in the original). It collides only with entities (section 8) and bridges.
+- Each target dies with **1 hit** (including the bridge).
 
-| Entidade | Sprite (L×A px) | Pontos | Movimento próprio | Notas |
+---
+
+## 8. Enemies and objects
+
+All entities live in WORLD coordinates and move down the screen with the scroll. Collision AABB = sprite shrunk 1 px on each side.
+
+| Entity | Sprite (W×H px) | Points | Own movement | Notes |
 |---|---|---|---|---|
-| Navio (ship) | 28×9 | **30** [VERIFICADO] | Horizontal, **15 px/s** × mult. da seção; só em seções onde "% navio móvel" sorteia móvel; senão parado | Só spawna em canal com largura ≥ 48 px. Ricocheteia nas margens (inverte direção a 2 px da margem/ilha). |
-| Helicóptero (heli) | 16×12 | **60** [VERIFICADO] | Horizontal, **20 px/s** × mult.; móvel conforme "% heli móvel" da seção; senão parado | Hélice animada: 2 frames alternando a cada 6 ticks (10 Hz). Ricocheteia nas margens. |
-| Depósito (fuel depot) | 14×26 | **80** [VERIFICADO] | Estático | Reabastece se sobrevoado (seção 6). Colidir com ele NÃO mata — só reabastece **[VERIFICADO: fuel depots são a única colisão inofensiva]**. Rótulo vertical "F-U-E-L" em pixels no corpo do sprite (arte própria). |
-| Jato inimigo (enemy jet) | 16×6 | **100** [VERIFICADO] | Horizontal, **120 px/s** × mult., cruza a tela INTEIRA (inclusive sobre terra), não ricocheteia | Aparece a partir da **seção 3** **[DERIVADO: "após as primeiras pontes"]**. Spawn: gatilho posicionado no mundo; quando o gatilho entra a 130 px acima do player, o jato entra pela lateral sorteada (x = −16 ou 160) na altura do gatilho e cruza. Some ao sair da tela (sem pontos se escapar). |
-| Ponte (bridge) | canal 104 px × 24 px de altura | **500** [VERIFICADO] | Estática, ocupa TODO o canal | Fim de seção / checkpoint. Impossível passar sem destruir (colidir = morte). 1 tiro destrói (explosão grande + som próprio). Ponte destruída permanece destruída para sempre (inclusive após respawn). |
+| Ship (ship) | 28×9 | **30** [VERIFIED] | Horizontal, **15 px/s** × section mult.; only in sections where "% mobile ship" rolls mobile; otherwise stationary | Only spawns in a channel with width ≥ 48 px. Ricochets off the banks (reverses direction 2 px from the bank/island). |
+| Helicopter (heli) | 16×12 | **60** [VERIFIED] | Horizontal, **20 px/s** × mult.; mobile per the section's "% mobile heli"; otherwise stationary | Animated rotor: 2 frames alternating every 6 ticks (10 Hz). Ricochets off the banks. |
+| Fuel depot (fuel depot) | 14×26 | **80** [VERIFIED] | Static | Refuels if flown over (section 6). Colliding with it does NOT kill — it only refuels **[VERIFIED: fuel depots are the only harmless collision]**. Vertical "F-U-E-L" label in pixels on the sprite body (original art). |
+| Enemy jet (enemy jet) | 16×6 | **100** [VERIFIED] | Horizontal, **120 px/s** × mult., crosses the ENTIRE screen (including over land), does not ricochet | Appears starting at **section 3** **[DERIVED: "after the first bridges"]**. Spawn: a trigger positioned in the world; when the trigger enters 130 px above the player, the jet enters from the randomly chosen side (x = −16 or 160) at the trigger's height and crosses. Disappears on leaving the screen (no points if it escapes). |
+| Bridge (bridge) | 104 px channel × 24 px tall | **500** [VERIFIED] | Static, occupies the ENTIRE channel | End of section / checkpoint. Impossible to pass without destroying it (collide = death). 1 shot destroys it (big explosion + its own sound). A destroyed bridge stays destroyed forever (including after respawn). |
 
-- Inimigos **não atiram** (fiel ao 2600).
-- Inimigos móveis que ricocheteiam: ao alcançar 2 px da margem (ou da ilha), invertem a direção horizontal.
-- Cores dos inimigos (navio, heli, jato) trocam por seção, ciclando a tabela `ENEMY_TINTS` (seção 14) — eco da variação de cor do original.
-- Explosão de inimigo: sprite 16×12, 2 frames, 0,4 s total; a entidade morre no frame do acerto (pontos creditados imediatamente).
-- Decoração de margem (sem colisão, sem pontos): casas (16×10, paredes brancas, telhado vermelho-tijolo) e árvores (8×8, verde-escuro), posicionadas pelo gerador (seção 9.5).
+- Enemies **do not shoot** (faithful to the 2600).
+- Mobile enemies that ricochet: upon reaching 2 px from the bank (or the island), they reverse horizontal direction.
+- Enemy colors (ship, heli, jet) change per section, cycling the `ENEMY_TINTS` table (section 14) — an echo of the original's color variation.
+- Enemy explosion: 16×12 sprite, 2 frames, 0.4 s total; the entity dies on the hit frame (points credited immediately).
+- Bank decoration (no collision, no points): houses (16×10, white walls, brick-red roof) and trees (8×8, dark green), placed by the generator (section 9.5).
 
 ---
 
-## 9. Rio — geração procedural determinística
+## 9. River — deterministic procedural generation
 
 ### 9.1 PRNG
-- **LFSR Galois de 16 bits**: `state = (state >> 1) ^ (-(state & 1) & 0xB400)`; bit de saída = `state & 1` antes do shift. Helpers: `nextBits(n)` (n bits, MSB primeiro), `nextInt(max)` = `nextBits(16) % max`, `chance(p)` = `nextBits(16) < p * 65536`.
-- Seed **fixa e hard-coded**: `RNG_SEED = 0xACE1`. Sem seed por partida: toda partida gera o MESMO rio — fidelidade ao original **[VERIFICADO: o original usa LFSR com vetor inicial hard-coded]**.
-- Toda aleatoriedade do jogo (geometria, decoração, entidades) sai EXCLUSIVAMENTE deste stream, consumido na ordem definida em 9.6. Nada de `Math.random()`.
+- **16-bit Galois LFSR**: `state = (state >> 1) ^ (-(state & 1) & 0xB400)`; output bit = `state & 1` before the shift. Helpers: `nextBits(n)` (n bits, MSB first), `nextInt(max)` = `nextBits(16) % max`, `chance(p)` = `nextBits(16) < p * 65536`.
+- **Fixed and hard-coded** seed: `RNG_SEED = 0xACE1`. No per-game seed: every playthrough generates the SAME river — fidelity to the original **[VERIFIED: the original uses an LFSR with a hard-coded initial vector]**.
+- All randomness in the game (geometry, decoration, entities) comes EXCLUSIVELY from this stream, consumed in the order defined in 9.6. No `Math.random()`.
 
-### 9.2 Estrutura
-- O mundo é uma sequência infinita de **seções**, geradas sob demanda (gerar a seção k+1 quando a câmera se aproximar a 400 px do fim da seção k; nunca descartar seções já geradas até o checkpoint, para respawn determinístico — pode-se regenerá-las pois a geração é determinística por índice: cachear o estado do LFSR no início de cada seção).
-- Cada seção = **150 chunks** de **8 px** de altura = **1200 px** de mundo (≈ 20 s a cruzeiro). A **ponte** ocupa os últimos 3 chunks (24 px) da seção.
-- Chunk armazena: `leftX`, `rightX` (bordas do canal), e opcionalmente `islandLeftX`, `islandRightX` (ilha central). Água = entre left e right, menos a ilha. Terra = resto.
-- Margem mínima de terra em cada lado: 8 px (canal sempre dentro de x ∈ [8, 152]).
+### 9.2 Structure
+- The world is an infinite sequence of **sections**, generated on demand (generate section k+1 when the camera comes within 400 px of the end of section k; never discard sections already generated up to the checkpoint, for deterministic respawn — they can be regenerated since generation is deterministic by index: cache the LFSR state at the start of each section).
+- Each section = **150 chunks** of **8 px** height = **1200 px** of world (≈ 20 s at cruise). The **bridge** occupies the last 3 chunks (24 px) of the section.
+- A chunk stores: `leftX`, `rightX` (channel edges), and optionally `islandLeftX`, `islandRightX` (central island). Water = between left and right, minus the island. Land = the rest.
+- Minimum land margin on each side: 8 px (channel always within x ∈ [8, 152]).
 
-### 9.3 Geometria por segmentos
-Estado corrente: `leftX`, `rightX` (começa: canal centrado, cx=80, largura 104). Para cada seção, repetir até preencher os chunks 12..130 (ver zonas fixas em 9.4): sortear um **segmento** com os pesos da tabela da seção 10:
+### 9.3 Geometry by segments
+Current state: `leftX`, `rightX` (starts: channel centered, cx=80, width 104). For each section, repeat until filling chunks 12..130 (see fixed zones in 9.4): roll a **segment** using the weights from the section 10 table:
 
-| Segmento | Duração (chunks) | Efeito por chunk |
+| Segment | Duration (chunks) | Effect per chunk |
 |---|---|---|
-| `STRAIGHT` | 8 + nextBits(3) → 8–15 | mantém left/right |
-| `SHIFT` | 8 + nextBits(3) | move cx ±3 px/chunk (direção = 1 bit; mantém largura; clampa nas margens mín.) |
-| `NARROW` | 8 + nextBits(3) | largura −4 px/chunk (−2 por lado) até `W_MIN` da seção |
-| `WIDEN` | 8 + nextBits(3) | largura +4 px/chunk até `W_MAX` da seção |
-| `ISLAND` | 20 + nextBits(4) → 20–35 | requer largura ≥ 88 (senão vira `WIDEN`). Ilha centrada em cx; largura da ilha cresce +4 px/chunk desde 0 até `w − 56` (mín. 16; cada canal lateral fica com ≥ 28 px), platô, e decresce −4 px/chunk nos chunks finais (formato losango). |
+| `STRAIGHT` | 8 + nextBits(3) → 8–15 | keeps left/right |
+| `SHIFT` | 8 + nextBits(3) | moves cx ±3 px/chunk (direction = 1 bit; keeps width; clamps at the min. margins) |
+| `NARROW` | 8 + nextBits(3) | width −4 px/chunk (−2 per side) down to the section's `W_MIN` |
+| `WIDEN` | 8 + nextBits(3) | width +4 px/chunk up to the section's `W_MAX` |
+| `ISLAND` | 20 + nextBits(4) → 20–35 | requires width ≥ 88 (otherwise becomes `WIDEN`). Island centered on cx; the island's width grows +4 px/chunk from 0 up to `w − 56` (min. 16; each side channel keeps ≥ 28 px), plateaus, and shrinks −4 px/chunk in the final chunks (diamond shape). |
 
-Restrições invariantes (garantem navegabilidade a `SPEED_FAST`): variação máxima de qualquer borda = **4 px por chunk**; largura de canal única ∈ [`W_MIN(seção)`, `W_MAX(seção)`]; canais duplos (ilha) ≥ **24 px** cada.
+Invariant constraints (guarantee navigability at `SPEED_FAST`): maximum variation of any edge = **4 px per chunk**; single-channel width ∈ [`W_MIN(section)`, `W_MAX(section)`]; double channels (island) ≥ **24 px** each.
 
-### 9.4 Zonas fixas de cada seção
-- Chunks 0–11 (96 px pós-ponte): reta, largura forçada transicionando para 104 px centrada em cx=80 (máx. 4 px/chunk de ajuste), **livre de entidades** — é a zona de respawn.
-- Chunks 12–130: segmentos aleatórios (9.3).
-- Chunks 131–146: aproximação da ponte — transição de volta para canal reto 104 px centrado (respeitando 4 px/chunk), sem entidades.
-- Chunks 147–149: a **ponte** (colisão em todo o canal, 104×24 px).
+### 9.4 Fixed zones of each section
+- Chunks 0–11 (96 px post-bridge): straight, width forced to transition to 104 px centered on cx=80 (max. 4 px/chunk adjustment), **entity-free** — this is the respawn zone.
+- Chunks 12–130: random segments (9.3).
+- Chunks 131–146: bridge approach — transition back to a straight 104 px centered channel (respecting 4 px/chunk), no entities.
+- Chunks 147–149: the **bridge** (collision across the whole channel, 104×24 px).
 
-### 9.5 Entidades e decoração (por seção, valores da tabela 10)
-1. **Depósitos** (`N_FUEL`): posições-alvo igualmente espaçadas nos chunks 12–130, jitter ±8 chunks (`nextInt(17) − 8`). x = centro do canal ± `nextInt(desvio)` mantendo 10 px livres até margem/ilha; se houver ilha no chunk, sortear 1 bit para escolher o canal.
-2. **Inimigos** (`N_ENEMY`): mesmo esquema de espaçamento com jitter; distância mínima entre entidades quaisquer = 5 chunks (40 px) — se violar, empurrar para o próximo chunk livre. Tipo: 1 bit → navio/heli (se largura < 48, força heli). Flag móvel: `chance(%tipo móvel da seção)`. Direção inicial: 1 bit.
-3. **Jatos** (`N_JET`): gatilhos igualmente espaçados nos chunks 20–120, jitter ±5; lado de entrada: 1 bit.
-4. **Decoração**: a cada 40 chunks (jitter ±16) uma casa no lado sorteado (1 bit), 4–20 px da borda externa do rio; a cada 24 chunks (jitter ±8) uma árvore idem. Sem colisão.
+### 9.5 Entities and decoration (per section, values from table 10)
+1. **Depots** (`N_FUEL`): target positions evenly spaced across chunks 12–130, jitter ±8 chunks (`nextInt(17) − 8`). x = channel center ± `nextInt(deviation)` keeping 10 px clear to the bank/island; if there is an island in the chunk, roll 1 bit to choose the channel.
+2. **Enemies** (`N_ENEMY`): same spacing scheme with jitter; minimum distance between any entities = 5 chunks (40 px) — if violated, push to the next free chunk. Type: 1 bit → ship/heli (if width < 48, force heli). Mobile flag: `chance(section's % mobile type)`. Initial direction: 1 bit.
+3. **Jets** (`N_JET`): triggers evenly spaced across chunks 20–120, jitter ±5; entry side: 1 bit.
+4. **Decoration**: every 40 chunks (jitter ±16) a house on the randomly chosen side (1 bit), 4–20 px from the river's outer edge; every 24 chunks (jitter ±8) a tree likewise. No collision.
 
-### 9.6 Ordem de consumo do LFSR (obrigatória, para determinismo)
-Por seção: (1) geometria segmento a segmento; (2) decoração; (3) depósitos; (4) inimigos; (5) jatos. Cachear `lfsrState` no início de cada seção para regeneração idêntica no respawn.
+### 9.6 LFSR consumption order (mandatory, for determinism)
+Per section: (1) geometry segment by segment; (2) decoration; (3) depots; (4) enemies; (5) jets. Cache `lfsrState` at the start of each section for identical regeneration on respawn.
 
 ---
 
-## 10. Dificuldade por seção
+## 10. Difficulty per section
 
-Seções 1–8; da seção 9 em diante usa a linha 8 para sempre (dificuldade máxima cíclica), apenas continuando o ciclo de cores dos inimigos.
+Sections 1–8; from section 9 onward it uses row 8 forever (cyclic maximum difficulty), only continuing the enemy color cycle.
 
-| Seção | W_MIN (px) | W_MAX (px) | Peso ISLAND | Peso SHIFT | Pesos STRAIGHT/NARROW/WIDEN | N_ENEMY | N_FUEL | % heli móvel | % navio móvel | N_JET | Mult. velocidade inimigo |
+| Section | W_MIN (px) | W_MAX (px) | ISLAND weight | SHIFT weight | STRAIGHT/NARROW/WIDEN weights | N_ENEMY | N_FUEL | % mobile heli | % mobile ship | N_JET | Enemy speed mult. |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | 64 | 120 | 0 | 1 | 6/3/2 | 10 | 6 | 0% | 0% | 0 | 1,0 |
-| 2 | 56 | 120 | 1 | 1 | 6/3/2 | 13 | 5 | 25% | 0% | 0 | 1,0 |
-| 3 | 56 | 112 | 2 | 2 | 6/3/2 | 16 | 5 | 50% | 0% | 2 | 1,1 |
-| 4 | 48 | 112 | 2 | 2 | 6/3/2 | 19 | 4 | 75% | 25% | 3 | 1,2 |
-| 5 | 48 | 104 | 3 | 3 | 6/3/2 | 22 | 4 | 100% | 50% | 4 | 1,3 |
-| 6 | 40 | 104 | 3 | 3 | 6/3/2 | 25 | 3 | 100% | 75% | 5 | 1,4 |
-| 7 | 40 | 96 | 4 | 4 | 6/3/2 | 28 | 3 | 100% | 100% | 6 | 1,5 |
-| 8+ | 36 | 96 | 4 | 4 | 6/3/2 | 30 | 2 | 100% | 100% | 7 | 1,6 |
+| 1 | 64 | 120 | 0 | 1 | 6/3/2 | 10 | 6 | 0% | 0% | 0 | 1.0 |
+| 2 | 56 | 120 | 1 | 1 | 6/3/2 | 13 | 5 | 25% | 0% | 0 | 1.0 |
+| 3 | 56 | 112 | 2 | 2 | 6/3/2 | 16 | 5 | 50% | 0% | 2 | 1.1 |
+| 4 | 48 | 112 | 2 | 2 | 6/3/2 | 19 | 4 | 75% | 25% | 3 | 1.2 |
+| 5 | 48 | 104 | 3 | 3 | 6/3/2 | 22 | 4 | 100% | 50% | 4 | 1.3 |
+| 6 | 40 | 104 | 3 | 3 | 6/3/2 | 25 | 3 | 100% | 75% | 5 | 1.4 |
+| 7 | 40 | 96 | 4 | 4 | 6/3/2 | 28 | 3 | 100% | 100% | 6 | 1.5 |
+| 8+ | 36 | 96 | 4 | 4 | 6/3/2 | 30 | 2 | 100% | 100% | 7 | 1.6 |
 
-Racional **[DERIVADO, calibrado sobre fatos verificados]**: no original, canal estreita, depósitos rareiam ("fewer fuel depots deeper in the river" **[VERIFICADO]**), inimigos parados passam a se mover com a dificuldade **[VERIFICADO]**, jatos surgem após as primeiras pontes.
-
----
-
-## 11. Pontuação e vidas
-
-- Tabela de pontos **[VERIFICADO — manual Activision]**: navio 30 · helicóptero 60 · depósito 80 · jato 100 · ponte 500. Todos múltiplos de 10 (o dígito final do placar é sempre 0, como no original).
-- Escapar (jato sair da tela / entidade sair por baixo) = 0 pontos.
-- **Vidas**: começa com **3 jatos de reserva** (+1 em jogo = 4 no total) **[VERIFICADO]**. HUD mostra o número de reservas (começa em "3").
-- **Vida extra**: +1 reserva a cada **10.000 pontos** (em cada múltiplo cruzado), máximo de **9 reservas** simultâneas **[VERIFICADO]**. Jingle de vida extra (seção 15). Se já tem 9, o prêmio é perdido (sem acúmulo retroativo).
-- **Placar máximo / easter egg [VERIFICADO]**: quando o score atingir ≥ 1.000.000 (i.e., passar de 999.990), o placar exibe **`!!!!!!`** (seis exclamações) permanentemente, o score interno trava em 1.000.000, **nunca mais aumenta e não gera mais vidas extras**; o jogo continua normalmente até perder todas as vidas. O hi-score gravado é 1.000.000 e a tela título o exibe como `!!!!!!`.
-- Exibição: 6 dígitos, **sem zeros à esquerda** (começa mostrando `0`), centrado no HUD.
+Rationale **[DERIVED, calibrated against verified facts]**: in the original, the channel narrows, depots grow scarce ("fewer fuel depots deeper in the river" **[VERIFIED]**), stationary enemies begin to move as difficulty rises **[VERIFIED]**, jets appear after the first bridges.
 
 ---
 
-## 12. Colisões, morte e respawn
+## 11. Scoring and lives
 
-### 12.1 Detecção
-- Player × margens/ilha: amostrar os chunks nas linhas do topo, meio e base do sprite; se `player.left+1 < leftX` ou `player.right−1 > rightX` ou sobrepõe a faixa da ilha em qualquer linha amostrada → morte.
-- Player × entidade (AABB −1 px): navio, heli, jato, ponte → morte. Depósito → apenas refuel.
-- Míssil × entidade/ponte (AABB) → destrói alvo, remove míssil, credita pontos.
-- Fuel = 0 → morte.
+- Points table **[VERIFIED — Activision manual]**: ship 30 · helicopter 60 · depot 80 · jet 100 · bridge 500. All multiples of 10 (the scoreboard's final digit is always 0, as in the original).
+- Escaping (jet leaving the screen / entity exiting from the bottom) = 0 points.
+- **Lives**: starts with **3 reserve jets** (+1 in play = 4 total) **[VERIFIED]**. The HUD shows the number of reserves (starts at "3").
+- **Extra life**: +1 reserve every **10,000 points** (at each multiple crossed), maximum of **9 reserves** at once **[VERIFIED]**. Extra-life jingle (section 15). If you already have 9, the award is lost (no retroactive accumulation).
+- **Maximum scoreboard / easter egg [VERIFIED]**: when the score reaches ≥ 1,000,000 (i.e., passes 999,990), the scoreboard displays **`!!!!!!`** (six exclamation marks) permanently, the internal score locks at 1,000,000, **never increases again and generates no more extra lives**; the game continues normally until all lives are lost. The recorded hi-score is 1,000,000 and the title screen displays it as `!!!!!!`.
+- Display: 6 digits, **no leading zeros** (starts by showing `0`), centered in the HUD.
 
-### 12.2 Morte
-Estado `DYING` (1,0 s): scroll para; player vira animação de explosão **16×14, 3 frames a 8 fps** precedidos de flash branco de 100 ms; som `playerExplosion`; alarme de fuel silencia.
+---
 
-### 12.3 Vidas
-Ao fim de `DYING`: reservas > 0 → decrementa e vai a `RESPAWN`; reservas = 0 → `GAME_OVER`.
+## 12. Collisions, death, and respawn
 
-### 12.4 Checkpoint e respawn **[VERIFICADO: recomeça na mesma seção; se a ponte da seção foi destruída, recomeça na seguinte]**
-- **Checkpoint** = posição de mundo imediatamente após a última ponte DESTRUÍDA (ou o início do mundo, se nenhuma).
-- Respawn: câmera reposicionada com o checkpoint na base do playfield; player no centro do canal, x = cx do chunk, throttle = cruzeiro, fuel = 100, míssil removido.
-- Todas as entidades do checkpoint em diante voltam ao estado inicial gerado (destruídas reaparecem — regeneração determinística pela seed/cache da seção), EXCETO pontes já destruídas, que permanecem destruídas.
-- Os 96 px pós-ponte são livres de entidades por construção (9.4) — não há morte injusta no respawn. Sem invulnerabilidade temporária.
+### 12.1 Detection
+- Player × banks/island: sample the chunks at the top, middle, and bottom lines of the sprite; if `player.left+1 < leftX` or `player.right−1 > rightX` or it overlaps the island band at any sampled line → death.
+- Player × entity (AABB −1 px): ship, heli, jet, bridge → death. Depot → refuel only.
+- Missile × entity/bridge (AABB) → destroys target, removes missile, credits points.
+- Fuel = 0 → death.
 
-### 12.5 Bordas
-O player nunca sai dos limites do canvas (clamp da seção 5). O scroll nunca para em `PLAYING`.
+### 12.2 Death
+State `DYING` (1.0 s): scroll stops; the player turns into an explosion animation **16×14, 3 frames at 8 fps** preceded by a 100 ms white flash; `playerExplosion` sound; the fuel alarm goes silent.
+
+### 12.3 Lives
+At the end of `DYING`: reserves > 0 → decrement and go to `RESPAWN`; reserves = 0 → `GAME_OVER`.
+
+### 12.4 Checkpoint and respawn **[VERIFIED: restarts in the same section; if the section's bridge was destroyed, restarts in the next one]**
+- **Checkpoint** = world position immediately after the last DESTROYED bridge (or the start of the world, if none).
+- Respawn: camera repositioned with the checkpoint at the bottom of the playfield; player at the center of the channel, x = the chunk's cx, throttle = cruise, fuel = 100, missile removed.
+- All entities from the checkpoint onward return to their initial generated state (destroyed ones reappear — deterministic regeneration from the section's seed/cache), EXCEPT already-destroyed bridges, which stay destroyed.
+- The 96 px post-bridge are entity-free by construction (9.4) — there is no unfair death on respawn. No temporary invulnerability.
+
+### 12.5 Edges
+The player never leaves the canvas bounds (clamp from section 5). The scroll never stops in `PLAYING`.
 
 ---
 
 ## 13. HUD (y = 162–209)
 
-Separador: linha preta 1 px em y=162. Fundo do HUD: cinza `COLOR_HUD_BG` de y=163 a 202.
+Separator: 1 px black line at y=162. HUD background: gray `COLOR_HUD_BG` from y=163 to 202.
 
 ### 13.1 Score — y 165–175
-Dígitos 7 px de altura (fonte 5×7, 1 px de espaçamento), cor `COLOR_SCORE` (amarelo), centrado horizontalmente. Sem zeros à esquerda. Aos 1.000.000: `!!!!!!`.
+Digits 7 px tall (5×7 font, 1 px spacing), color `COLOR_SCORE` (yellow), horizontally centered. No leading zeros. At 1,000,000: `!!!!!!`.
 
-### 13.2 Medidor de combustível — y 179–191
-- Barra: x = 24 a 136 (112 px), fundo `COLOR_GAUGE_BG` (creme), borda 1 px preta.
-- Letras `E` (x=14) e `F` (x=140), fonte 5×7, preto.
-- Ticks pretos verticais (1×4 px, no topo interno da barra) em 0%, 25%, 50%, 75%, 100% (o de 50% com 6 px, mais alto — como o marcador central do original).
-- Ponteiro: barra vertical branca 3×11 px com contorno preto 1 px, x = 24 + fuel/100 × 109, deslizando continuamente.
+### 13.2 Fuel gauge — y 179–191
+- Bar: x = 24 to 136 (112 px), background `COLOR_GAUGE_BG` (cream), 1 px black border.
+- Letters `E` (x=14) and `F` (x=140), 5×7 font, black.
+- Vertical black ticks (1×4 px, at the inner top of the bar) at 0%, 25%, 50%, 75%, 100% (the 50% one 6 px, taller — like the original's center marker).
+- Pointer: white 3×11 px vertical bar with a 1 px black outline, x = 24 + fuel/100 × 109, sliding continuously.
 
-### 13.3 Vidas — y 195–202 (sobre o fundo cinza)
-Ícone de avião 10×8 px (`COLOR_PLAYER`) em x=8, seguido de `×N` (fonte 5×7, preto), N = reservas (0–9).
+### 13.3 Lives — y 195–202 (over the gray background)
+10×8 px plane icon (`COLOR_PLAYER`) at x=8, followed by `×N` (5×7 font, black), N = reserves (0–9).
 
-### 13.4 Faixa decorativa — y 203–209
-Fundo preto com 6 faixas horizontais de 1 px (y 203–208): vermelho, laranja, amarelo, verde, azul, roxo (valores na seção 14) — eco do arco-íris da faixa do original, arte própria. Centrado sobre a faixa, `DELTA STRIKE` em fonte 3×5 preta vazada (recorte). 
+### 13.4 Decorative band — y 203–209
+Black background with 6 horizontal 1 px stripes (y 203–208): red, orange, yellow, green, blue, purple (values in section 14) — an echo of the original's rainbow band, original art. Centered over the band, `DELTA STRIKE` in a hollow (cut-out) black 3×5 font.
 
-### 13.5 Fontes pixel (originais, definidas em js/sprites.js)
-- 5×7: dígitos 0–9, A–Z, `×`, `!`, `·`. Usada em score, HUD e telas.
-- 3×5: versão mini para a faixa decorativa e rodapés.
+### 13.5 Pixel fonts (original, defined in js/sprites.js)
+- 5×7: digits 0–9, A–Z, `×`, `!`, `·`. Used in score, HUD, and screens.
+- 3×5: mini version for the decorative band and footers.
 
 ---
 
-## 14. Paleta de cores
+## 14. Color palette
 
-Cores escolhidas dentro do espírito da paleta NTSC do TIA (tons aproximados, hex próprios — arte original). Tudo chapado, sem gradientes, sem anti-alias.
+Colors chosen in the spirit of the TIA's NTSC palette (approximate tones, own hex values — original art). Everything flat, no gradients, no anti-aliasing.
 
-| Constante | Hex | Uso |
+| Constant | Hex | Use |
 |---|---|---|
-| `COLOR_WATER` | `#2E63C8` | água do rio |
-| `COLOR_LAND` | `#4E9C30` | margens e ilhas |
-| `COLOR_PLAYER` | `#E8E060` | jato do player, ícone de vidas |
-| `COLOR_MISSILE` | `#F4F4F4` | míssil |
-| `COLOR_FUEL_BODY` | `#D8D8D8` | corpo do depósito |
-| `COLOR_FUEL_TEXT` | `#C03020` | letras F-U-E-L e topo do depósito |
-| `COLOR_BRIDGE` | `#909090` | estrutura da ponte |
-| `COLOR_BRIDGE_ROAD` | `#303030` | pista sobre a ponte (faixa central 4 px) |
-| `COLOR_HUD_BG` | `#9C9C9C` | fundo do HUD |
-| `COLOR_SCORE` | `#E8D850` | dígitos do score, logo título |
-| `COLOR_GAUGE_BG` | `#C8B858` | fundo do medidor E–F |
-| `COLOR_EXPLOSION_A` | `#E87820` | explosão frame claro |
-| `COLOR_EXPLOSION_B` | `#B02818` | explosão frame escuro |
-| `COLOR_HOUSE_WALL` | `#E0E0E0` | decoração casa |
-| `COLOR_HOUSE_ROOF` | `#B04010` | decoração telhado |
-| `COLOR_TREE` | `#1E6A14` | decoração árvore |
-| `ENEMY_TINTS` (ciclo por seção) | `#DADADA`, `#E07820`, `#50B8DE`, `#D060C8` | cor de navio/heli/jato na seção k = `ENEMY_TINTS[(k−1) % 4]` |
-| Faixa arco-íris (13.4) | `#C03020`, `#E07820`, `#E8D850`, `#4E9C30`, `#2E63C8`, `#7040A0` | 6 linhas de 1 px |
-| `COLOR_BLACK` / `COLOR_WHITE` | `#000000` / `#F4F4F4` | letterbox, textos, contornos |
+| `COLOR_WATER` | `#2E63C8` | river water |
+| `COLOR_LAND` | `#4E9C30` | banks and islands |
+| `COLOR_PLAYER` | `#E8E060` | player jet, lives icon |
+| `COLOR_MISSILE` | `#F4F4F4` | missile |
+| `COLOR_FUEL_BODY` | `#D8D8D8` | depot body |
+| `COLOR_FUEL_TEXT` | `#C03020` | F-U-E-L letters and depot top |
+| `COLOR_BRIDGE` | `#909090` | bridge structure |
+| `COLOR_BRIDGE_ROAD` | `#303030` | road over the bridge (4 px center strip) |
+| `COLOR_HUD_BG` | `#9C9C9C` | HUD background |
+| `COLOR_SCORE` | `#E8D850` | score digits, title logo |
+| `COLOR_GAUGE_BG` | `#C8B858` | E–F gauge background |
+| `COLOR_EXPLOSION_A` | `#E87820` | explosion light frame |
+| `COLOR_EXPLOSION_B` | `#B02818` | explosion dark frame |
+| `COLOR_HOUSE_WALL` | `#E0E0E0` | house decoration |
+| `COLOR_HOUSE_ROOF` | `#B04010` | roof decoration |
+| `COLOR_TREE` | `#1E6A14` | tree decoration |
+| `ENEMY_TINTS` (cycle per section) | `#DADADA`, `#E07820`, `#50B8DE`, `#D060C8` | ship/heli/jet color in section k = `ENEMY_TINTS[(k−1) % 4]` |
+| Rainbow band (13.4) | `#C03020`, `#E07820`, `#E8D850`, `#4E9C30`, `#2E63C8`, `#7040A0` | 6 lines of 1 px |
+| `COLOR_BLACK` / `COLOR_WHITE` | `#000000` / `#F4F4F4` | letterbox, text, outlines |
 
 ---
 
-## 15. Áudio (Web Audio API, 100% sintetizado, estética TIA)
+## 15. Audio (Web Audio API, 100% synthesized, TIA aesthetic)
 
-- Apenas ondas quadradas e ruído branco (buffer de ruído gerado uma vez). Lowpass global a 4 kHz + leve bitcrush opcional NÃO — manter simples: apenas osciladores `square` e ruído, ganho mestre 0,8.
-- **2 canais lógicos** (como o TIA): `CH0` = motor (contínuo); `CH1` = eventos, um por vez, por prioridade (maior vence e corta o atual): playerExplosion(10) > bridgeExplosion(9) > extraLife(8) > klaxon(6) > refuel(5) > enemyExplosion(4) > missile(3) > start(2).
-- Desbloqueio: criar/`resume()` o `AudioContext` no primeiro `keydown`/`pointerdown`/`touchstart`. Mute (M/botão): ganho mestre 0; estado persiste em `localStorage`.
+- Only square waves and white noise (noise buffer generated once). Global 4 kHz lowpass + light optional bitcrush: NO — keep it simple: only `square` oscillators and noise, master gain 0.8.
+- **2 logical channels** (like the TIA): `CH0` = engine (continuous); `CH1` = events, one at a time, by priority (higher wins and cuts off the current one): playerExplosion(10) > bridgeExplosion(9) > extraLife(8) > klaxon(6) > refuel(5) > enemyExplosion(4) > missile(3) > start(2).
+- Unlock: create/`resume()` the `AudioContext` on the first `keydown`/`pointerdown`/`touchstart`. Mute (M/button): master gain 0; state persists in `localStorage`.
 
-| Som | Síntese (valores exatos) |
+| Sound | Synthesis (exact values) |
 |---|---|
-| `engine` (contínuo em PLAYING) | square, freq = 54 + 0,56 × v (v = scroll px/s) → 71/88/138 Hz nas 3 marchas, ganho 0,18; transição de freq segue a rampa do throttle. |
-| `missile` | square, sweep linear 950→320 Hz em 90 ms, ganho 0,4, decay linear até 0. |
-| `enemyExplosion` | ruído, 350 ms, decay exponencial (τ=120 ms), ganho 0,7. |
-| `playerExplosion` | ruído 1,0 s (τ=300 ms) + square 110→40 Hz em 400 ms, ganho 0,9. Motor silencia. |
-| `bridgeExplosion` | ruído 800 ms (τ=250 ms) + square 60 Hz por 300 ms, ganho 0,9. |
-| `klaxon` (loop, fuel<25) | square alternando 620 Hz e 460 Hz a cada 250 ms, ganho 0,5. |
-| `refuel` (loop enquanto sobrepõe depósito) | square em escada: 10 passos/s subindo 320→920 Hz (ciclo de 1 s, reinicia), ganho 0,35. Ao completar 100: 2 blips 990 Hz de 120 ms (gap 60 ms). |
-| `extraLife` | square, arpejo C5-E5-G5 (523,25 / 659,25 / 783,99 Hz) tocado 2×, 70 ms por nota, ganho 0,6. |
-| `start` | square 392 / 523,25 / 659,25 Hz, 80 ms cada, ganho 0,5. |
+| `engine` (continuous in PLAYING) | square, freq = 54 + 0.56 × v (v = scroll px/s) → 71/88/138 Hz in the 3 gears, gain 0.18; freq transition follows the throttle ramp. |
+| `missile` | square, linear sweep 950→320 Hz over 90 ms, gain 0.4, linear decay to 0. |
+| `enemyExplosion` | noise, 350 ms, exponential decay (τ=120 ms), gain 0.7. |
+| `playerExplosion` | noise 1.0 s (τ=300 ms) + square 110→40 Hz over 400 ms, gain 0.9. Engine goes silent. |
+| `bridgeExplosion` | noise 800 ms (τ=250 ms) + square 60 Hz for 300 ms, gain 0.9. |
+| `klaxon` (loop, fuel<25) | square alternating 620 Hz and 460 Hz every 250 ms, gain 0.5. |
+| `refuel` (loop while overlapping a depot) | stepped square: 10 steps/s rising 320→920 Hz (1 s cycle, restarts), gain 0.35. On reaching 100: 2 blips 990 Hz of 120 ms (60 ms gap). |
+| `extraLife` | square, C5-E5-G5 arpeggio (523.25 / 659.25 / 783.99 Hz) played 2×, 70 ms per note, gain 0.6. |
+| `start` | square 392 / 523.25 / 659.25 Hz, 80 ms each, gain 0.5. |
 
 ---
 
-## 16. Persistência
+## 16. Persistence
 
-- `localStorage["ds.hiscore"]`: inteiro. Atualizado no `GAME_OVER` (e imediatamente ao atingir 1.000.000). Exibido na tela título (1.000.000 → `!!!!!!`).
+- `localStorage["ds.hiscore"]`: integer. Updated on `GAME_OVER` (and immediately upon reaching 1,000,000). Shown on the title screen (1,000,000 → `!!!!!!`).
 - `localStorage["ds.muted"]`: `"1"`/`"0"`.
-- Nada mais é persistido. Sem rede, sem telemetria.
+- Nothing else is persisted. No network, no telemetry.
 
 ---
 
-## 17. CONSTANTES CANÔNICAS
+## 17. CANONICAL CONSTANTS
 
-Tabela pronta para virar `js/constants.js` (objeto global `DS.C`). Cores na seção 14 entram como estão.
+Table ready to become `js/constants.js` (global object `DS.C`). Colors from section 14 go in as they are.
 
-| Constante | Valor | Unidade |
+| Constant | Value | Unit |
 |---|---|---|
 | `LOGICAL_W` | 160 | px |
 | `LOGICAL_H` | 210 | px |
@@ -345,7 +345,7 @@ Tabela pronta para virar `js/constants.js` (objeto global `DS.C`). Cores na seç
 | `MISSILE_W` | 2 | px |
 | `MISSILE_H` | 6 | px |
 | `MISSILE_SPEED` | 420 | px/s |
-| `MISSILE_MAX_ONSCREEN` | 1 | un |
+| `MISSILE_MAX_ONSCREEN` | 1 | units |
 | `MISSILE_COOLDOWN_MS` | 180 | ms |
 | `FUEL_MAX` | 100 | u |
 | `FUEL_CONSUMPTION` | 1.3 | u/s |
@@ -359,8 +359,8 @@ Tabela pronta para virar `js/constants.js` (objeto global `DS.C`). Cores na seç
 | `SCORE_MAX` | 1000000 | pts |
 | `SCORE_BANG_DISPLAY` | `"!!!!!!"` | string |
 | `EXTRA_LIFE_EVERY` | 10000 | pts |
-| `LIVES_RESERVE_START` | 3 | un |
-| `LIVES_RESERVE_MAX` | 9 | un |
+| `LIVES_RESERVE_START` | 3 | units |
+| `LIVES_RESERVE_MAX` | 9 | units |
 | `SHIP_W` / `SHIP_H` | 28 / 9 | px |
 | `SHIP_SPEED` | 15 | px/s |
 | `SHIP_MIN_CHANNEL_W` | 48 | px |
@@ -369,7 +369,7 @@ Tabela pronta para virar `js/constants.js` (objeto global `DS.C`). Cores na seç
 | `HELI_ROTOR_PERIOD_TICKS` | 6 | ticks |
 | `JET_W` / `JET_H` | 16 / 6 | px |
 | `JET_SPEED` | 120 | px/s |
-| `JET_FIRST_SECTION` | 3 | seção |
+| `JET_FIRST_SECTION` | 3 | section |
 | `JET_TRIGGER_DISTANCE` | 130 | px |
 | `FUELDEPOT_W` / `FUELDEPOT_H` | 14 / 26 | px |
 | `BRIDGE_CHANNEL_W` | 104 | px |
@@ -389,8 +389,8 @@ Tabela pronta para virar `js/constants.js` (objeto global `DS.C`). Cores na seç
 | `RNG_SEED` | 0xACE1 | — |
 | `LFSR_TAPS` | 0xB400 | — |
 | `GEN_LOOKAHEAD` | 400 | px |
-| `DIFFICULTY` (tabela seção 10, linhas 1–8) | ver seção 10 | — |
-| `ENEMY_SPEED_MULT` (por seção) | 1.0,1.0,1.1,1.2,1.3,1.4,1.5,1.6 | × |
+| `DIFFICULTY` (section 10 table, rows 1–8) | see section 10 | — |
+| `ENEMY_SPEED_MULT` (per section) | 1.0,1.0,1.1,1.2,1.3,1.4,1.5,1.6 | × |
 | `DYING_DURATION_MS` | 1000 | ms |
 | `RESPAWN_DURATION_MS` | 1200 | ms |
 | `GAMEOVER_INPUT_DELAY_MS` | 1000 | ms |
@@ -399,8 +399,8 @@ Tabela pronta para virar `js/constants.js` (objeto global `DS.C`). Cores na seç
 | `TITLE_BLINK_MS` | 500 | ms |
 | `TOUCH_DEADZONE_X` | 10 | px CSS |
 | `TOUCH_THROTTLE_DY` | 24 | px CSS |
-| `TOUCH_STEER_ZONE` | 0.6 | fração da largura |
-| `CORNER_BUTTON_SIZE` | 24 | px lógicos |
+| `TOUCH_STEER_ZONE` | 0.6 | fraction of width |
+| `CORNER_BUTTON_SIZE` | 24 | logical px |
 | `MASTER_GAIN` | 0.8 | — |
 | `ENGINE_GAIN` | 0.18 | — |
 | `ENGINE_FREQ_BASE` | 54 | Hz |
@@ -412,16 +412,16 @@ Tabela pronta para virar `js/constants.js` (objeto global `DS.C`). Cores na seç
 
 ---
 
-## 18. Checklist de fidelidade (critérios de aceite)
+## 18. Fidelity checklist (acceptance criteria)
 
-1. Pontuação exata 30/60/80/100/500; dígito final do placar sempre 0.
-2. Vida extra a cada 10.000; máx. 9 reservas; começa com 3 reservas.
-3. `!!!!!!` a 1.000.000, score congelado, jogo continua.
-4. Fuel: F→E ≈ 77 s a qualquer marcha; sirene abaixo de 1/4; morte a 0; reabastecer devagar rende mais.
-5. Não é possível parar (mínimo 30 px/s); 3 marchas com resposta quase instantânea.
-6. 1 míssil por vez, guiado lateralmente (estilo chave B).
-7. Ponte bloqueia o canal, vale 500, é checkpoint; respawn após a última ponte destruída, com tanque cheio e inimigos restaurados.
-8. Inimigos parados nas primeiras seções passam a se mover nas seguintes; jatos surgem na seção 3; móveis ricocheteiam nas margens (exceto jatos, que cruzam tudo).
-9. Mesmo rio em toda partida (seed fixa).
-10. Visual: 160×210 pixelado, verde/azul chapados, HUD cinza com score amarelo, medidor E–F com ponteiro, faixa arco-íris na base.
-11. Som: só quadrada + ruído, motor contínuo variando com o throttle, klaxon de fuel, explosões de ruído.
+1. Exact scoring 30/60/80/100/500; scoreboard's final digit always 0.
+2. Extra life every 10,000; max. 9 reserves; starts with 3 reserves.
+3. `!!!!!!` at 1,000,000, score frozen, game continues.
+4. Fuel: F→E ≈ 77 s at any gear; siren below 1/4; death at 0; refueling slowly yields more.
+5. Stopping is impossible (minimum 30 px/s); 3 gears with near-instant response.
+6. 1 missile at a time, laterally guided (switch B style).
+7. The bridge blocks the channel, is worth 500, is a checkpoint; respawn after the last destroyed bridge, with a full tank and enemies restored.
+8. Stationary enemies in the early sections start moving in later ones; jets appear in section 3; mobile ones ricochet off the banks (except jets, which cross everything).
+9. Same river in every playthrough (fixed seed).
+10. Visual: 160×210 pixelated, flat green/blue, gray HUD with yellow score, E–F gauge with pointer, rainbow band at the bottom.
+11. Sound: only square + noise, continuous engine varying with throttle, fuel klaxon, noise explosions.

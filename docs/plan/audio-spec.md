@@ -1,289 +1,289 @@
-# DELTA STRIKE — Especificação de Áudio (js/audio.js)
+# DELTA STRIKE — Audio Specification (js/audio.js)
 
-Documento de planejamento. Idioma: pt-BR. Identificadores de código: inglês.
-Escopo: 100% do áudio do jogo. O implementador NÃO deve tomar nenhuma decisão de
-design ao codificar este documento — todos os números estão fechados.
-
----
-
-## 1. Princípios e referência sonora
-
-O alvo estético é a sonoridade do chip **TIA do Atari 2600** conforme usada em
-River Raid (Activision, 1982), reproduzida com síntese própria em **Web Audio API**.
-Fatos de referência do original que moldam esta spec (absorvidos e reescritos,
-nada copiado):
-
-- O TIA tem **apenas 2 canais** de áudio, cada um com onda quadrada/"poly noise"
-  (LFSR), divisor de frequência de poucos bits e volume em 16 degraus. Resultado:
-  timbres ásperos, pitch "em degraus", sem suavidade analógica.
-- River Raid **não tem música** — só efeitos. O motor é um **ronco grave contínuo**
-  cujo pitch acompanha a velocidade (freio = mais grave, acelerado = mais agudo).
-- O tiro é um "tsiu" curtíssimo com pitch caindo. **Só existe 1 míssil do jogador
-  na tela por vez** (limite de hardware do original que o game design mantém);
-  logo a cadência real do som de tiro é limitada pelo jogo (~4–6/s), não pelo áudio.
-- Explosões são rajadas de ruído com decaimento; a da **ponte** (e a morte do
-  jogador) é mais longa e mais grave que a de inimigos.
-- O reabastecimento emite um **bipe repetido ("glug-glug") cujo pitch sobe**
-  conforme o tanque enche, e cessa ao sair do depósito ou encher.
-- **Vida extra a cada 10.000 pontos.**
-- O original **não tinha alarme audível de combustível baixo** (o jogador olhava o
-  medidor). O Delta Strike ADICIONA esse alarme deliberadamente, como concessão de
-  usabilidade (tela pequena de celular), em volume baixo para não quebrar a estética.
-  Esta é uma decisão fechada, não rediscutir na implementação.
-
-Regras gerais de fidelidade adotadas:
-
-1. **Somente síntese em runtime.** Zero arquivos de áudio, zero fetch, zero CDN.
-2. **Ondas quadradas + ruído branco filtrado** como únicos timbres. Proibido usar
-   `sine`/`triangle`/`sawtooth` exceto onde esta spec mandar explicitamente
-   (nenhum som usa; o LFO do alarme e do motor é `square` também).
-3. **Sem reverb, sem delay, sem stereo panning.** TIA era mono e seco. Todo o
-   grafo é mono até o destino.
-4. Envelopes curtos e "duros" (ataques de 3–8 ms), decaimentos exponenciais.
+Planning document. Language: en-US. Code identifiers: English.
+Scope: 100% of the game's audio. The implementer must NOT make any design
+decision while coding this document — all the numbers are settled.
 
 ---
 
-## 2. Arquitetura geral
+## 1. Principles and sonic reference
 
-### 2.1 Contexto e desbloqueio (obrigatório para mobile)
+The aesthetic target is the sound of the **Atari 2600 TIA chip** as used in
+River Raid (Activision, 1982), reproduced with our own synthesis in **Web Audio API**.
+Reference facts from the original that shape this spec (absorbed and rewritten,
+nothing copied):
 
-- **Um único `AudioContext`** para todo o jogo, criado com
-  `new AudioContext({ latencyHint: 'interactive' })` (com fallback
-  `webkitAudioContext` para Safari antigo).
-- O contexto **não** é criado no load. `DS.Audio.init()` (chamada única, no boot,
-  a partir de `game.js`) apenas registra listeners de desbloqueio em `window`,
-  com `capture: true`: eventos `pointerdown`, `touchend` e `keydown`.
-- No **primeiro gesto** do usuário: criar o contexto, montar a cadeia master
-  (§2.2), gerar o buffer de ruído (§2.3), chamar `ctx.resume()` se
-  `ctx.state === 'suspended'`, marcar `_ready = true` e remover os três listeners.
-- **Toda função pública de som é no-op silencioso enquanto `_ready === false`**
-  (retorna sem erro). Como iniciar a partida exige Enter/toque, o motor sempre
-  encontrará o contexto pronto.
-- Listener adicional permanente em `document.visibilitychange`: ao voltar a ficar
-  visível e o jogo NÃO estiver pausado, chamar `ctx.resume()`.
+- The TIA has **only 2 audio channels**, each with a square wave / "poly noise"
+  (LFSR), a few-bit frequency divider and volume in 16 steps. Result:
+  harsh timbres, "stepped" pitch, no analog smoothness.
+- River Raid **has no music** — only effects. The engine is a **continuous low drone**
+  whose pitch follows the speed (braking = lower, accelerating = higher).
+- The shot is a very short "tsiu" with falling pitch. **Only 1 player missile
+  exists on screen at a time** (a hardware limit of the original that the game design keeps);
+  so the real firing rate of the shot sound is limited by the game (~4–6/s), not by the audio.
+- Explosions are bursts of noise with decay; the **bridge** one (and the player's
+  death) is longer and lower than the enemy one.
+- Refueling emits a **repeated beep ("glug-glug") whose pitch rises**
+  as the tank fills, and stops when leaving the depot or when full.
+- **Extra life every 10,000 points.**
+- The original **had no audible low-fuel alarm** (the player watched the
+  gauge). Delta Strike deliberately ADDS this alarm, as a usability
+  concession (small phone screen), at low volume so as not to break the aesthetic.
+  This is a closed decision, not to be re-discussed during implementation.
 
-### 2.2 Cadeia master
+General fidelity rules adopted:
+
+1. **Runtime synthesis only.** Zero audio files, zero fetch, zero CDN.
+2. **Square waves + filtered white noise** as the only timbres. Using
+   `sine`/`triangle`/`sawtooth` is forbidden except where this spec explicitly requires it
+   (no sound uses them; the alarm's and the engine's LFO is `square` too).
+3. **No reverb, no delay, no stereo panning.** The TIA was mono and dry. The entire
+   graph is mono all the way to the destination.
+4. Short, "hard" envelopes (attacks of 3–8 ms), exponential decays.
+
+---
+
+## 2. General architecture
+
+### 2.1 Context and unlock (mandatory for mobile)
+
+- **A single `AudioContext`** for the whole game, created with
+  `new AudioContext({ latencyHint: 'interactive' })` (with a
+  `webkitAudioContext` fallback for old Safari).
+- The context is **not** created on load. `DS.Audio.init()` (called once, at boot,
+  from `game.js`) only registers unlock listeners on `window`,
+  with `capture: true`: `pointerdown`, `touchend` and `keydown` events.
+- On the user's **first gesture**: create the context, build the master chain
+  (§2.2), generate the noise buffer (§2.3), call `ctx.resume()` if
+  `ctx.state === 'suspended'`, set `_ready = true` and remove the three listeners.
+- **Every public sound function is a silent no-op while `_ready === false`**
+  (returns without error). Since starting the match requires Enter/tap, the engine will always
+  find the context ready.
+- An additional permanent listener on `document.visibilitychange`: when becoming
+  visible again and the game is NOT paused, call `ctx.resume()`.
+
+### 2.2 Master chain
 
 ```
-[todas as vozes] → sfxBus (GainNode, gain = 1.0)
-                 → compressor (DynamicsCompressorNode)
-                 → muteGain (GainNode, gain = 1.0 | 0.0)
-                 → masterGain (GainNode, gain = 0.5)
-                 → ctx.destination
+[all voices] → sfxBus (GainNode, gain = 1.0)
+             → compressor (DynamicsCompressorNode)
+             → muteGain (GainNode, gain = 1.0 | 0.0)
+             → masterGain (GainNode, gain = 0.5)
+             → ctx.destination
 ```
 
-| Nó           | Parâmetro   | Valor fixo |
+| Node         | Parameter   | Fixed value |
 |--------------|-------------|-----------|
-| `sfxBus`     | gain        | 1.0 (nunca automatizado) |
+| `sfxBus`     | gain        | 1.0 (never automated) |
 | `compressor` | threshold   | −12 dB |
 | `compressor` | knee        | 20 |
 | `compressor` | ratio       | 6 |
 | `compressor` | attack      | 0.003 s |
 | `compressor` | release     | 0.25 s |
 | `muteGain`   | gain        | 1.0 (unmuted) / 0.0 (muted) |
-| `masterGain` | gain        | **0.5** (teto do mix; nunca automatizado) |
+| `masterGain` | gain        | **0.5** (mix ceiling; never automated) |
 
-O compressor existe para o pior caso (motor + alarme + explosão grande + jingle
-simultâneos) não clipar. Não é efeito estético; com os ganhos desta spec ele age
-raramente.
+The compressor exists so that the worst case (engine + alarm + big explosion + jingle
+simultaneously) does not clip. It is not an aesthetic effect; with the gains in this spec it acts
+rarely.
 
-### 2.3 Buffer de ruído (gerado uma vez, reutilizado sempre)
+### 2.3 Noise buffer (generated once, always reused)
 
-- Criado logo após o contexto, em `init`/unlock:
-  `ctx.createBuffer(1, ctx.sampleRate * 1, ctx.sampleRate)` — **1 segundo, mono**.
-- Preenchido com `data[i] = Math.random() * 2 - 1` para todo `i`.
-- Guardado em variável privada `noiseBuffer` e **reutilizado por todos** os sons
-  de ruído. Cada disparo cria um novo `AudioBufferSourceNode` apontando para o
-  mesmo buffer, sempre com `loop = true` e `start(t0)` (offset 0). O fim do som é
-  sempre por `stop()` explícito, nunca pelo fim do buffer.
+- Created right after the context, in `init`/unlock:
+  `ctx.createBuffer(1, ctx.sampleRate * 1, ctx.sampleRate)` — **1 second, mono**.
+- Filled with `data[i] = Math.random() * 2 - 1` for every `i`.
+- Stored in a private variable `noiseBuffer` and **reused by all** noise
+  sounds. Each trigger creates a new `AudioBufferSourceNode` pointing to the
+  same buffer, always with `loop = true` and `start(t0)` (offset 0). The end of the sound is
+  always via an explicit `stop()`, never via the end of the buffer.
 
-### 2.4 Política de vozes
+### 2.4 Voice policy
 
-| Grupo | Sons | Política |
+| Group | Sounds | Policy |
 |-------|------|----------|
-| Motor | ENGINE | **Singleton.** Um único conjunto de nós, criado em `startEngine()` e destruído em `stopEngine()`. Chamar `startEngine()` com motor já ligado é no-op. |
-| Singletons retrigáveis | REFUEL (blip), FUEL BAIXO (alarme) | Uma voz por tipo. Novo trigger **corta** a voz anterior (cancel + gain 0 + stop) antes de criar a nova. O alarme é ligado/desligado, não retrigado por blip. |
-| Polifônicos (one-shots) | SHOT, EXPLOSION_SMALL, EXPLOSION_BIG, EXTRA_LIFE, UI_START | Cada trigger cria vozes novas independentes. **Teto de 8 vozes one-shot simultâneas**: mantidas em um array; ao estourar o teto, a voz mais antiga é morta imediatamente (`cancelScheduledValues(now)`, `gain.setValueAtTime(0, now)`, `stop(now + 0.001)`). |
+| Engine | ENGINE | **Singleton.** A single set of nodes, created in `startEngine()` and destroyed in `stopEngine()`. Calling `startEngine()` with the engine already on is a no-op. |
+| Retriggerable singletons | REFUEL (blip), LOW FUEL (alarm) | One voice per type. A new trigger **cuts** the previous voice (cancel + gain 0 + stop) before creating the new one. The alarm is turned on/off, not retriggered by a blip. |
+| Polyphonic (one-shots) | SHOT, EXPLOSION_SMALL, EXPLOSION_BIG, EXTRA_LIFE, UI_START | Each trigger creates new independent voices. **Ceiling of 8 simultaneous one-shot voices**: kept in an array; when the ceiling is exceeded, the oldest voice is killed immediately (`cancelScheduledValues(now)`, `gain.setValueAtTime(0, now)`, `stop(now + 0.001)`). |
 
-Higiene obrigatória de toda voz one-shot: registrar `source.onended` (ou o
-`onended` do oscilador principal) para `disconnect()` de todos os nós da voz e
-removê-la do array de vozes ativas. Nenhum nó pode vazar.
+Mandatory hygiene for every one-shot voice: register `source.onended` (or the
+main oscillator's `onended`) to `disconnect()` all of the voice's nodes and
+remove it from the active-voices array. No node may leak.
 
-### 2.5 Regras de agendamento (valem para TODOS os sons)
+### 2.5 Scheduling rules (apply to ALL sounds)
 
-- Todo agendamento usa `t0 = ctx.currentTime` capturado uma única vez no início
-  do trigger; os tempos abaixo são **relativos a t0** (em segundos).
-- Envelopes **nunca** usam `setTimeout`; só a API de automação
+- Every scheduling uses `t0 = ctx.currentTime` captured once at the start
+  of the trigger; the times below are **relative to t0** (in seconds).
+- Envelopes **never** use `setTimeout`; only the automation API
   (`setValueAtTime` / `linearRampToValueAtTime` / `exponentialRampToValueAtTime`
-  / `setTargetAtTime`). `setTimeout` é permitido apenas para limpeza redundante.
-- `exponentialRampToValueAtTime` não aceita 0: decaimentos exponenciais terminam
-  em **0.001** seguido de `setValueAtTime(0, mesmoInstante)`.
-- Todo ganho de voz começa com `gain.setValueAtTime(0, t0)` antes do ataque
-  (evita clique).
-- Todo oscilador/fonte é finalizado com `stop(t0 + duraçãoTotal)` explícito.
+  / `setTargetAtTime`). `setTimeout` is allowed only for redundant cleanup.
+- `exponentialRampToValueAtTime` does not accept 0: exponential decays end
+  at **0.001** followed by `setValueAtTime(0, sameInstant)`.
+- Every voice's gain starts with `gain.setValueAtTime(0, t0)` before the attack
+  (avoids a click).
+- Every oscillator/source is finalized with an explicit `stop(t0 + totalDuration)`.
 
-### 2.6 Ganhos relativos do mix (pico de cada voz, antes do master 0.5)
+### 2.6 Relative mix gains (peak of each voice, before the master 0.5)
 
-| Som | Pico de ganho |
+| Sound | Peak gain |
 |-----|---------------|
-| ENGINE (bus composto) | 0.22 (±0.03 do LFO) |
+| ENGINE (composite bus) | 0.22 (±0.03 from the LFO) |
 | SHOT | 0.30 |
-| EXPLOSION_SMALL | 0.62 (rev. 2026-07-11; era 0.50) |
-| EXPLOSION_BIG (ruído) | 0.65 (rev. 2026-07-11; era 0.60) |
-| EXPLOSION_BIG (corpo 60 Hz) | 0.35 |
+| EXPLOSION_SMALL | 0.62 (rev. 2026-07-11; was 0.50) |
+| EXPLOSION_BIG (noise) | 0.65 (rev. 2026-07-11; was 0.60) |
+| EXPLOSION_BIG (60 Hz body) | 0.35 |
 | REFUEL (blip) | 0.22 |
-| FUEL BAIXO (alarme) | 0.18 |
-| EXTRA_LIFE (cada nota) | 0.25 |
+| LOW FUEL (alarm) | 0.18 |
+| EXTRA_LIFE (each note) | 0.25 |
 | UI_START | 0.20 |
 
 ---
 
-## 3. API pública (contrato de `DS.Audio`)
+## 3. Public API (`DS.Audio` contract)
 
-Objeto global `DS.Audio` (namespace `DS` já criado em `constants.js`).
-Todas as funções são seguras de chamar a qualquer momento (no-op se `!_ready`).
+Global object `DS.Audio` (namespace `DS` already created in `constants.js`).
+All functions are safe to call at any time (no-op if `!_ready`).
 
-| Função | Assinatura | Semântica |
+| Function | Signature | Semantics |
 |--------|-----------|-----------|
-| `init` | `init()` | Idempotente. Registra listeners de desbloqueio (§2.1) e lê o estado de mute persistido (§3.1). Chamada uma vez no boot por `game.js`. |
-| `startEngine` | `startEngine()` | Liga o loop do motor (§4). No-op se já ligado. |
-| `setEngineSpeed` | `setEngineSpeed(v)` | `v` ∈ [0..2] (0 = freio, 1 = cruzeiro, 2 = máximo). Clampa e atualiza o pitch do motor (§4.3). No-op se motor desligado. |
-| `stopEngine` | `stopEngine()` | Desliga o motor com fade de 80 ms (§4.4). |
-| `shoot` | `shoot()` | One-shot do tiro (§5). |
-| `explosionSmall` | `explosionSmall()` | One-shot da explosão pequena (§6). |
-| `explosionBig` | `explosionBig()` | One-shot da explosão grande (§7). |
-| `refuelTick` | `refuelTick(level01)` | `level01` ∈ [0..1] = nível atual do tanque. Emite um blip (§8). Chamada pelo jogo a cada 100 ms enquanto reabastece. |
-| `lowFuelAlarm` | `lowFuelAlarm(on)` | `true` liga o alarme intermitente (singleton), `false` desliga (§9). Chamadas redundantes são no-op. |
-| `extraLife` | `extraLife()` | Jingle de 3 notas (§10). |
-| `uiStart` | `uiStart()` | Blip de confirmação do start (§11). |
-| `setMuted` | `setMuted(bool)` | Alterna `muteGain` 1↔0 com rampa linear de 15 ms; persiste (§3.1). |
-| `setPaused` | `setPaused(bool)` | `true` → `ctx.suspend()`; `false` → `ctx.resume()`. Congela TUDO (motor, alarme, agendamentos) sem perder estado — é o mecanismo oficial da pausa (tecla P). |
+| `init` | `init()` | Idempotent. Registers the unlock listeners (§2.1) and reads the persisted mute state (§3.1). Called once at boot by `game.js`. |
+| `startEngine` | `startEngine()` | Starts the engine loop (§4). No-op if already on. |
+| `setEngineSpeed` | `setEngineSpeed(v)` | `v` ∈ [0..2] (0 = braking, 1 = cruise, 2 = maximum). Clamps and updates the engine pitch (§4.3). No-op if the engine is off. |
+| `stopEngine` | `stopEngine()` | Stops the engine with an 80 ms fade (§4.4). |
+| `shoot` | `shoot()` | Shot one-shot (§5). |
+| `explosionSmall` | `explosionSmall()` | Small explosion one-shot (§6). |
+| `explosionBig` | `explosionBig()` | Big explosion one-shot (§7). |
+| `refuelTick` | `refuelTick(level01)` | `level01` ∈ [0..1] = current tank level. Emits a blip (§8). Called by the game every 100 ms while refueling. |
+| `lowFuelAlarm` | `lowFuelAlarm(on)` | `true` turns on the intermittent alarm (singleton), `false` turns it off (§9). Redundant calls are no-op. |
+| `extraLife` | `extraLife()` | 3-note jingle (§10). |
+| `uiStart` | `uiStart()` | Start confirmation blip (§11). |
+| `setMuted` | `setMuted(bool)` | Toggles `muteGain` 1↔0 with a 15 ms linear ramp; persists (§3.1). |
+| `setPaused` | `setPaused(bool)` | `true` → `ctx.suspend()`; `false` → `ctx.resume()`. Freezes EVERYTHING (engine, alarm, scheduling) without losing state — it is the official pause mechanism (P key). |
 
-Estado interno mínimo: `_ready`, `_muted`, `_engine` (objeto com os nós ou
-`null`), `_refuelVoice`, `_alarm` (nós ou `null`), `_voices` (array de one-shots).
+Minimal internal state: `_ready`, `_muted`, `_engine` (object with the nodes or
+`null`), `_refuelVoice`, `_alarm` (nodes or `null`), `_voices` (array of one-shots).
 
-### 3.1 Persistência de mute
+### 3.1 Mute persistence
 
-- Chave `localStorage`: `"ds_muted"`, valores `"1"` / `"0"`.
-- Lida em `init()`; aplicada ao criar `muteGain` no unlock.
-- Gravada em toda chamada de `setMuted`. Falha de `localStorage` (modo privado)
-  é engolida com try/catch — o mute funciona só em memória.
+- `localStorage` key: `"ds_muted"`, values `"1"` / `"0"`.
+- Read in `init()`; applied when creating `muteGain` at unlock.
+- Written on every `setMuted` call. A `localStorage` failure (private mode)
+  is swallowed with try/catch — the mute works in memory only.
 
-### 3.2 Matriz evento-do-jogo → chamada de áudio (contrato com `game.js`)
+### 3.2 Game-event → audio-call matrix (contract with `game.js`)
 
-| Evento no jogo | Chamada(s), nesta ordem |
+| Game event | Call(s), in this order |
 |----------------|------------------------|
-| Tela de título → start (Enter/botão touch) | `uiStart()`; `startEngine()` |
-| Velocidade do jogador mudou (a cada frame, só se mudou) | `setEngineSpeed(v)` |
-| Tiro efetivamente disparado (respeitando 1 míssil na tela) | `shoot()` |
-| Inimigo (navio/heli/jato) ou depósito destruído por tiro | `explosionSmall()` |
-| Ponte destruída | `explosionBig()` |
-| Morte do jogador (colisão ou fuel 0) | `lowFuelAlarm(false)`; `stopEngine()`; `explosionBig()` |
-| Respawn após morte (com vidas restantes) | `startEngine()` (o jogo reavalia e religa o alarme se ainda `fuel01 < 0.25`) |
-| Sobre depósito, tanque enchendo — a cada **100 ms** | `refuelTick(fuel01)` |
-| `fuel01` cruzou para **< 0.25** | `lowFuelAlarm(true)` |
-| `fuel01` cruzou para **≥ 0.25** (reabasteceu) | `lowFuelAlarm(false)` |
-| Score cruzou múltiplo de 10.000 (vida extra) | `extraLife()` |
-| Tecla P / perda de foco com jogo ativo | `setPaused(true)` / `setPaused(false)` |
-| Tecla M / botão mute | `setMuted(!muted)` |
-| Game over (última vida) | `lowFuelAlarm(false)`; `stopEngine()`; `explosionBig()` |
+| Title screen → start (Enter/touch button) | `uiStart()`; `startEngine()` |
+| Player speed changed (every frame, only if it changed) | `setEngineSpeed(v)` |
+| Shot actually fired (respecting 1 missile on screen) | `shoot()` |
+| Enemy (ship/heli/jet) or depot destroyed by a shot | `explosionSmall()` |
+| Bridge destroyed | `explosionBig()` |
+| Player death (collision or fuel 0) | `lowFuelAlarm(false)`; `stopEngine()`; `explosionBig()` |
+| Respawn after death (with lives remaining) | `startEngine()` (the game re-evaluates and turns the alarm back on if still `fuel01 < 0.25`) |
+| Over a depot, tank filling — every **100 ms** | `refuelTick(fuel01)` |
+| `fuel01` crossed to **< 0.25** | `lowFuelAlarm(true)` |
+| `fuel01` crossed to **≥ 0.25** (refueled) | `lowFuelAlarm(false)` |
+| Score crossed a multiple of 10,000 (extra life) | `extraLife()` |
+| P key / focus loss with the game active | `setPaused(true)` / `setPaused(false)` |
+| M key / mute button | `setMuted(!muted)` |
+| Game over (last life) | `lowFuelAlarm(false)`; `stopEngine()`; `explosionBig()` |
 
-Nota: quando a ponte explode e ao mesmo tempo o score cruza 10.000,
-`explosionBig()` e `extraLife()` tocam sobrepostos — comportamento desejado
-(vozes polifônicas).
+Note: when the bridge explodes and at the same time the score crosses 10,000,
+`explosionBig()` and `extraLife()` play overlapping — desired behavior
+(polyphonic voices).
 
 ---
 
-## 4. ENGINE — ronco contínuo do motor
+## 4. ENGINE — continuous engine drone
 
-Singleton em loop. Liga no start, morre na morte; congela na pausa via
-`setPaused`. É a "cama" sonora permanente do jogo.
+Singleton in a loop. Turns on at start, dies on death; freezes on pause via
+`setPaused`. It is the game's permanent sonic "bed".
 
-### 4.1 Grafo de nós
+### 4.1 Node graph
 
 ```
 oscA (square, f)      → gA (1.0)  ─┐
 oscB (square, 2·f)    → gB (0.5)  ─┼→ engineBus (0.22) → sfxBus
 noise (buffer, loop)  → bp → gN (0.25) ─┘        ↑
-lfo (square, 27 Hz) → lfoDepth (0.03) ───────────┘ (conectado a engineBus.gain)
+lfo (square, 27 Hz) → lfoDepth (0.03) ───────────┘ (connected to engineBus.gain)
 ```
 
-### 4.2 Parâmetros
+### 4.2 Parameters
 
-| Nó | Tipo | Parâmetro | Valor |
+| Node | Type | Parameter | Value |
 |----|------|-----------|-------|
 | `oscA` | OscillatorNode | type | `'square'` |
-| `oscA` | | frequency | `f(v)` — ver §4.3; inicial `f(1) = 65 Hz` |
+| `oscA` | | frequency | `f(v)` — see §4.3; initial `f(1) = 65 Hz` |
 | `oscB` | OscillatorNode | type | `'square'` |
-| `oscB` | | frequency | sempre `2·f(v)`; inicial 130 Hz (garante audibilidade do ronco em alto-falante de celular, que não reproduz 40 Hz) |
-| `gA` | GainNode | gain | 1.0 fixo |
-| `gB` | GainNode | gain | 0.5 fixo |
+| `oscB` | | frequency | always `2·f(v)`; initial 130 Hz (ensures the drone is audible on a phone speaker, which does not reproduce 40 Hz) |
+| `gA` | GainNode | gain | 1.0 fixed |
+| `gB` | GainNode | gain | 0.5 fixed |
 | `noise` | AudioBufferSourceNode | buffer / loop | `noiseBuffer` / `true` |
-| `bp` | BiquadFilterNode | type / frequency / Q | `'bandpass'` / 400 Hz / 0.5 (fixos) |
-| `gN` | GainNode | gain | 0.25 fixo |
-| `engineBus` | GainNode | gain | alvo 0.22 (com fade-in/out, §4.4) |
-| `lfo` | OscillatorNode | type / frequency | `'square'` / 27 Hz (fixo — "granulado" TIA por modulação de amplitude) |
-| `lfoDepth` | GainNode | gain | 0.03 fixo (`lfo → lfoDepth → engineBus.gain`; o ganho do bus oscila 0.19–0.25) |
+| `bp` | BiquadFilterNode | type / frequency / Q | `'bandpass'` / 400 Hz / 0.5 (fixed) |
+| `gN` | GainNode | gain | 0.25 fixed |
+| `engineBus` | GainNode | gain | target 0.22 (with fade-in/out, §4.4) |
+| `lfo` | OscillatorNode | type / frequency | `'square'` / 27 Hz (fixed — TIA "graininess" via amplitude modulation) |
+| `lfoDepth` | GainNode | gain | 0.03 fixed (`lfo → lfoDepth → engineBus.gain`; the bus gain oscillates 0.19–0.25) |
 
-### 4.3 Mapa velocidade → frequência
+### 4.3 Speed → frequency map
 
-`f(v) = 40 + 25 · clamp(v, 0, 2)` Hz, com o alvo **arredondado para inteiro**
-(quantização que imita os degraus de pitch do TIA):
+`f(v) = 40 + 25 · clamp(v, 0, 2)` Hz, with the target **rounded to an integer**
+(quantization that mimics the TIA's pitch steps):
 
-| v | Estado | `oscA` | `oscB` |
+| v | State | `oscA` | `oscB` |
 |---|--------|--------|--------|
-| 0.0 | freando | 40 Hz | 80 Hz |
-| 1.0 | cruzeiro | 65 Hz | 130 Hz |
-| 2.0 | acelerado | 90 Hz | 180 Hz |
+| 0.0 | braking | 40 Hz | 80 Hz |
+| 1.0 | cruise | 65 Hz | 130 Hz |
+| 2.0 | accelerating | 90 Hz | 180 Hz |
 
-Aplicação em `setEngineSpeed(v)` — glide curto, sem clique e sem portamento
-"analógico" longo:
+Applied in `setEngineSpeed(v)` — short glide, no click and no long "analog"
+portamento:
 
 ```
 oscA.frequency.setTargetAtTime(round(f), now, 0.06)
 oscB.frequency.setTargetAtTime(round(f) * 2, now, 0.06)
 ```
 
-`v` intermediário é permitido (o jogo pode interpolar aceleração); a fórmula é
-contínua.
+Intermediate `v` is allowed (the game may interpolate acceleration); the formula is
+continuous.
 
-### 4.4 Ciclo de vida
+### 4.4 Life cycle
 
-- **`startEngine()`**: se `_engine != null`, retorna. Cria todos os nós, chama
-  `start(now)` em `oscA`, `oscB`, `noise`, `lfo`; envelope de entrada:
+- **`startEngine()`**: if `_engine != null`, return. Creates all nodes, calls
+  `start(now)` on `oscA`, `oscB`, `noise`, `lfo`; entry envelope:
   `engineBus.gain.setValueAtTime(0, now)` →
   `linearRampToValueAtTime(0.22, now + 0.12)`.
-- **`stopEngine()`**: se `_engine == null`, retorna. Envelope de saída:
-  `cancelScheduledValues(now)` → `setValueAtTime(valor atual, now)` →
-  `linearRampToValueAtTime(0, now + 0.08)`; `stop(now + 0.1)` nas quatro fontes;
-  `disconnect()` de tudo no `onended` de `oscA`; `_engine = null`.
-- **Pausa**: nada específico do motor — `setPaused(true)` suspende o contexto.
-- Duração: infinita (até `stopEngine`). O ruído usa `loop = true`, então o
-  buffer de 1 s nunca acaba.
+- **`stopEngine()`**: if `_engine == null`, return. Exit envelope:
+  `cancelScheduledValues(now)` → `setValueAtTime(currentValue, now)` →
+  `linearRampToValueAtTime(0, now + 0.08)`; `stop(now + 0.1)` on the four sources;
+  `disconnect()` of everything in `oscA`'s `onended`; `_engine = null`.
+- **Pause**: nothing engine-specific — `setPaused(true)` suspends the context.
+- Duration: infinite (until `stopEngine`). The noise uses `loop = true`, so the
+  1 s buffer never ends.
 
 ---
 
-## 5. SHOT — tiro ("tsiu")
+## 5. SHOT — shot ("tsiu")
 
-One-shot polifônico (na prática quase mono, pois o jogo só permite 1 míssil na
-tela; o áudio ainda assim impõe um guarda de retrigger mínimo de **50 ms**:
-chamadas de `shoot()` com menos de 50 ms desde a anterior são ignoradas).
+Polyphonic one-shot (in practice almost mono, since the game allows only 1 missile on
+screen; the audio still imposes a minimum retrigger guard of **50 ms**:
+`shoot()` calls less than 50 ms since the previous one are ignored).
 
-### 5.1 Grafo
+### 5.1 Graph
 
 ```
 osc (square) → g → sfxBus
 ```
 
-### 5.2 Parâmetros e automação (t0 = ctx.currentTime)
+### 5.2 Parameters and automation (t0 = ctx.currentTime)
 
-| Nó | Parâmetro | Valor inicial |
+| Node | Parameter | Initial value |
 |----|-----------|---------------|
 | `osc` | type | `'square'` |
-| `osc` | frequency | 1400 Hz em t0 |
-| `g` | gain | 0 em t0 |
+| `osc` | frequency | 1400 Hz at t0 |
+| `g` | gain | 0 at t0 |
 
-| Tempo (rel. t0) | Alvo | Método | Valor |
+| Time (rel. t0) | Target | Method | Value |
 |------------------|------|--------|-------|
 | 0 | osc.frequency | setValueAtTime | 1400 |
 | +0.090 | osc.frequency | exponentialRampToValueAtTime | 400 |
@@ -293,37 +293,37 @@ osc (square) → g → sfxBus
 | +0.090 | g.gain | setValueAtTime | 0 |
 
 - `osc.start(t0)`, `osc.stop(t0 + 0.10)`.
-- **Duração total: 100 ms.**
+- **Total duration: 100 ms.**
 
 ---
 
-## 6. EXPLOSION_SMALL — inimigo/depósito destruído
+## 6. EXPLOSION_SMALL — enemy/depot destroyed
 
-One-shot polifônico. Rajada de ruído com o filtro fechando (o "crunch" TIA —
-áspero e brilhante no ataque, fechando para o grave no decay).
+Polyphonic one-shot. Burst of noise with the filter closing (the TIA "crunch" —
+harsh and bright on the attack, closing toward the low end on the decay).
 
-> Revisão 2026-07-11 (playtest mobile: "explosões inaudíveis"): o lowpass
-> original 800→200 Hz descartava ~96% da potência do ruído e deixava o resto
-> abaixo da resposta de alto-falante de celular (medido: RMS 4× menor que o
-> tiro após highpass de 700 Hz). Filtro reaberto para 3200→350 Hz e pico
-> 0.50→0.55 — também mais fiel ao ruído áspero do TIA numa TV.
+> Revision 2026-07-11 (mobile playtest: "inaudible explosions"): the original
+> 800→200 Hz lowpass discarded ~96% of the noise's power and left the rest
+> below the response of a phone speaker (measured: RMS 4× smaller than the
+> shot after a 700 Hz highpass). Filter reopened to 3200→350 Hz and peak
+> 0.50→0.55 — also more faithful to the TIA's harsh noise on a TV.
 
-### 6.1 Grafo
+### 6.1 Graph
 
 ```
 noiseSrc (buffer, loop) → lp (lowpass) → g → sfxBus
 ```
 
-### 6.2 Parâmetros e automação
+### 6.2 Parameters and automation
 
-| Nó | Parâmetro | Valor inicial |
+| Node | Parameter | Initial value |
 |----|-----------|---------------|
 | `noiseSrc` | buffer / loop | `noiseBuffer` / `true` |
 | `lp` | type / Q | `'lowpass'` / 0.7 |
-| `lp` | frequency | 4500 Hz em t0 |
-| `g` | gain | 0 em t0 |
+| `lp` | frequency | 4500 Hz at t0 |
+| `g` | gain | 0 at t0 |
 
-| Tempo (rel. t0) | Alvo | Método | Valor |
+| Time (rel. t0) | Target | Method | Value |
 |------------------|------|--------|-------|
 | 0 | lp.frequency | setValueAtTime | 4500 |
 | +0.350 | lp.frequency | exponentialRampToValueAtTime | 400 |
@@ -333,37 +333,37 @@ noiseSrc (buffer, loop) → lp (lowpass) → g → sfxBus
 | +0.350 | g.gain | setValueAtTime | 0 |
 
 - `noiseSrc.start(t0)`, `noiseSrc.stop(t0 + 0.40)`.
-- **Duração total: 400 ms** (decay audível de 350 ms).
-- Critério de aceite (offline render, cadeia master completa, highpass duplo
-  de 700 Hz simulando celular; métrica = RMS da **janela de 120 ms mais
-  forte**, comparável entre sons de durações diferentes): ≥ 1.0× o SHOT.
-  Medido na calibração de 2026-07-11: 1.18× ✓ (valores 4500→400 / 0.62 vêm
-  de varredura offline; 3200→350 / 0.55 ficou em 0.94× e foi revogado).
+- **Total duration: 400 ms** (audible decay of 350 ms).
+- Acceptance criterion (offline render, full master chain, double 700 Hz
+  highpass simulating a phone; metric = RMS of the **strongest 120 ms
+  window**, comparable across sounds of different durations): ≥ 1.0× the SHOT.
+  Measured in the 2026-07-11 calibration: 1.18× ✓ (values 4500→400 / 0.62 come
+  from an offline sweep; 3200→350 / 0.55 landed at 0.94× and was revoked).
 
 ---
 
-## 7. EXPLOSION_BIG — ponte destruída e morte do jogador
+## 7. EXPLOSION_BIG — bridge destroyed and player death
 
-One-shot polifônico. Duas camadas somadas: ruído longo e grave + "corpo" de onda
-quadrada subgrave com pitch caindo (dá o peso que o ruído sozinho não tem).
+Polyphonic one-shot. Two summed layers: long low noise + a sub-bass square-wave
+"body" with falling pitch (gives the weight that the noise alone lacks).
 
-### 7.1 Grafo
+### 7.1 Graph
 
 ```
 noiseSrc (buffer, loop) → lp (lowpass) → gNoise ─┐
 body (square)           → gBody         ─┼→ sfxBus
 ```
 
-### 7.2 Camada de ruído
+### 7.2 Noise layer
 
-| Nó | Parâmetro | Valor inicial |
+| Node | Parameter | Initial value |
 |----|-----------|---------------|
 | `noiseSrc` | buffer / loop | `noiseBuffer` / `true` |
 | `lp` | type / Q | `'lowpass'` / 0.7 |
-| `lp` | frequency | 2400 Hz em t0 |
-| `gNoise` | gain | 0 em t0 |
+| `lp` | frequency | 2400 Hz at t0 |
+| `gNoise` | gain | 0 at t0 |
 
-| Tempo (rel. t0) | Alvo | Método | Valor |
+| Time (rel. t0) | Target | Method | Value |
 |------------------|------|--------|-------|
 | 0 | lp.frequency | setValueAtTime | 2400 |
 | +0.700 | lp.frequency | exponentialRampToValueAtTime | 200 |
@@ -372,23 +372,23 @@ body (square)           → gBody         ─┼→ sfxBus
 | +0.700 | gNoise.gain | exponentialRampToValueAtTime | 0.001 |
 | +0.700 | gNoise.gain | setValueAtTime | 0 |
 
-> Revisão 2026-07-11 (mesma motivação do §6): lowpass 600→100 Hz reaberto para
-> 2400→200 Hz e pico 0.60→0.65. A camada de corpo (§7.3) fica INALTERADA — o
-> subgrave continua dando peso em alto-falantes capazes. Critério de aceite
-> (mesma métrica do §6, janela de 120 ms pós-highpass): ≥ 1.2× o SHOT.
-> Medido na calibração de 2026-07-11: 1.44× ✓ (estes valores já passam).
+> Revision 2026-07-11 (same motivation as §6): lowpass 600→100 Hz reopened to
+> 2400→200 Hz and peak 0.60→0.65. The body layer (§7.3) stays UNCHANGED — the
+> sub-bass keeps giving weight on capable speakers. Acceptance criterion
+> (same metric as §6, 120 ms window post-highpass): ≥ 1.2× the SHOT.
+> Measured in the 2026-07-11 calibration: 1.44× ✓ (these values already pass).
 
 - `noiseSrc.start(t0)`, `noiseSrc.stop(t0 + 0.75)`.
 
-### 7.3 Camada de corpo
+### 7.3 Body layer
 
-| Nó | Parâmetro | Valor inicial |
+| Node | Parameter | Initial value |
 |----|-----------|---------------|
 | `body` | type | `'square'` |
-| `body` | frequency | 60 Hz em t0 |
-| `gBody` | gain | 0 em t0 |
+| `body` | frequency | 60 Hz at t0 |
+| `gBody` | gain | 0 at t0 |
 
-| Tempo (rel. t0) | Alvo | Método | Valor |
+| Time (rel. t0) | Target | Method | Value |
 |------------------|------|--------|-------|
 | 0 | body.frequency | setValueAtTime | 60 |
 | +0.400 | body.frequency | exponentialRampToValueAtTime | 40 |
@@ -398,32 +398,32 @@ body (square)           → gBody         ─┼→ sfxBus
 | +0.450 | gBody.gain | setValueAtTime | 0 |
 
 - `body.start(t0)`, `body.stop(t0 + 0.50)`.
-- **Duração total do som: 750 ms.**
-- Na morte do jogador a ordem é `stopEngine()` (fade 80 ms) e em seguida
-  `explosionBig()` no mesmo frame — a sobreposição é intencional.
+- **Total sound duration: 750 ms.**
+- On player death the order is `stopEngine()` (80 ms fade) and then
+  `explosionBig()` on the same frame — the overlap is intentional.
 
 ---
 
-## 8. REFUEL — "glug-glug" de reabastecimento
+## 8. REFUEL — refueling "glug-glug"
 
-Singleton retrigável. O **jogo** chama `refuelTick(fuel01)` a cada **100 ms**
-enquanto o avião está sobre o depósito e `fuel01 < 1`. Cada chamada emite UM
-blip; o pitch sobe com o nível do tanque, produzindo a subida característica.
-Ao sair do depósito ou encher, o jogo simplesmente para de chamar — não há
-função de stop.
+Retriggerable singleton. The **game** calls `refuelTick(fuel01)` every **100 ms**
+while the plane is over the depot and `fuel01 < 1`. Each call emits ONE
+blip; the pitch rises with the tank level, producing the characteristic rise.
+On leaving the depot or filling up, the game simply stops calling — there is no
+stop function.
 
-### 8.1 Grafo (por blip)
+### 8.1 Graph (per blip)
 
 ```
 osc (square) → g → sfxBus
 ```
 
-### 8.2 Parâmetros e automação (por blip)
+### 8.2 Parameters and automation (per blip)
 
-Frequência do blip: `fBlip = 200 + 500 · clamp(level01, 0, 1)` Hz
-(tanque vazio 200 Hz → cheio 700 Hz; valor usado sem quantização).
+Blip frequency: `fBlip = 200 + 500 · clamp(level01, 0, 1)` Hz
+(empty tank 200 Hz → full 700 Hz; value used without quantization).
 
-| Tempo (rel. t0) | Alvo | Método | Valor |
+| Time (rel. t0) | Target | Method | Value |
 |------------------|------|--------|-------|
 | 0 | osc.frequency | setValueAtTime | `fBlip` |
 | 0 | g.gain | setValueAtTime | 0 |
@@ -431,163 +431,163 @@ Frequência do blip: `fBlip = 200 + 500 · clamp(level01, 0, 1)` Hz
 | +0.040 | g.gain | setValueAtTime | 0.22 |
 | +0.060 | g.gain | linearRampToValueAtTime | 0 |
 
-- `osc.start(t0)`, `osc.stop(t0 + 0.07)`. **Duração do blip: 70 ms**
-  (60 ms audíveis + margem), cabendo folgado no período de 100 ms.
-- **Retrigger**: se `_refuelVoice` ainda existe ao chegar novo tick
-  (jogo chamando mais rápido que 70 ms), matar a voz anterior:
+- `osc.start(t0)`, `osc.stop(t0 + 0.07)`. **Blip duration: 70 ms**
+  (60 ms audible + margin), fitting comfortably within the 100 ms period.
+- **Retrigger**: if `_refuelVoice` still exists when a new tick arrives
+  (game calling faster than 70 ms), kill the previous voice:
   `g.gain.cancelScheduledValues(now)`, `g.gain.setValueAtTime(0, now)`,
-  `osc.stop(now + 0.001)`; então criar o novo blip. `_refuelVoice = null` no
+  `osc.stop(now + 0.001)`; then create the new blip. `_refuelVoice = null` in
   `onended`.
 
 ---
 
-## 9. FUEL BAIXO — alarme intermitente
+## 9. LOW FUEL — intermittent alarm
 
-Singleton ligado/desligado por `lowFuelAlarm(on)`. Gatilho definido pelo jogo:
-liga quando `fuel01 < 0.25`, desliga quando `fuel01 ≥ 0.25`, na morte e no game
-over. Totalmente construído com nós (o gate on/off é um LFO quadrado — nenhum
-timer JS envolvido, então a pausa via `ctx.suspend()` congela o alarme de graça).
+Singleton turned on/off by `lowFuelAlarm(on)`. Trigger defined by the game:
+turns on when `fuel01 < 0.25`, turns off when `fuel01 ≥ 0.25`, on death and on game
+over. Built entirely from nodes (the on/off gate is a square LFO — no JS
+timer involved, so pausing via `ctx.suspend()` freezes the alarm for free).
 
-### 9.1 Grafo
+### 9.1 Graph
 
 ```
 osc (square, 800 Hz) → g (base 0.09) → sfxBus
 lfo (square, 2.7778 Hz) → lfoDepth (0.09) → g.gain
 ```
 
-### 9.2 Parâmetros
+### 9.2 Parameters
 
-| Nó | Parâmetro | Valor |
+| Node | Parameter | Value |
 |----|-----------|-------|
-| `osc` | type / frequency | `'square'` / 800 Hz fixo |
+| `osc` | type / frequency | `'square'` / 800 Hz fixed |
 | `g` | gain (base) | 0.09 |
-| `lfo` | type / frequency | `'square'` / **2.7778 Hz** (período 360 ms; onda quadrada = 50% duty ⇒ **180 ms ligado / 180 ms desligado**) |
+| `lfo` | type / frequency | `'square'` / **2.7778 Hz** (360 ms period; square wave = 50% duty ⇒ **180 ms on / 180 ms off**) |
 | `lfoDepth` | gain | 0.09 |
 
-Soma no `g.gain`: base 0.09 + LFO(±1)·0.09 ⇒ alterna exatamente entre
-**0.18 (on)** e **0 (off)**. Como `OscillatorNode` quadrado inicia a fase no
-semiciclo positivo, o alarme começa SOANDO no instante do trigger — determinístico.
+Sum at `g.gain`: base 0.09 + LFO(±1)·0.09 ⇒ alternates exactly between
+**0.18 (on)** and **0 (off)**. Since a square `OscillatorNode` starts its phase in the
+positive half-cycle, the alarm starts SOUNDING at the instant of the trigger — deterministic.
 
-### 9.3 Ciclo de vida
+### 9.3 Life cycle
 
-- **Ligar** (`lowFuelAlarm(true)` com `_alarm == null`): criar nós,
+- **Turn on** (`lowFuelAlarm(true)` with `_alarm == null`): create nodes,
   `g.gain.setValueAtTime(0.09, now)`, `osc.start(now)`, `lfo.start(now)`.
-  Se `_alarm != null`, no-op.
-- **Desligar** (`lowFuelAlarm(false)` com `_alarm != null`): desconectar
-  `lfoDepth` de `g.gain`, `g.gain.cancelScheduledValues(now)`,
+  If `_alarm != null`, no-op.
+- **Turn off** (`lowFuelAlarm(false)` with `_alarm != null`): disconnect
+  `lfoDepth` from `g.gain`, `g.gain.cancelScheduledValues(now)`,
   `g.gain.setValueAtTime(g.gain.value, now)`,
   `g.gain.linearRampToValueAtTime(0, now + 0.03)`, `osc.stop(now + 0.05)`,
-  `lfo.stop(now + 0.05)`, disconnect no `onended`, `_alarm = null`.
-  Se `_alarm == null`, no-op.
-- Duração: indefinida enquanto ligado.
+  `lfo.stop(now + 0.05)`, disconnect in `onended`, `_alarm = null`.
+  If `_alarm == null`, no-op.
+- Duration: indefinite while on.
 
 ---
 
-## 10. EXTRA_LIFE — jingle de vida extra (a cada 10.000 pts)
+## 10. EXTRA_LIFE — extra-life jingle (every 10,000 pts)
 
-One-shot polifônico: arpejo maior ascendente de 3 notas quadradas, curtíssimo.
+Polyphonic one-shot: ascending major arpeggio of 3 square notes, very short.
 
-### 10.1 Grafo
+### 10.1 Graph
 
-Uma voz por nota (3 pares `osc → g → sfxBus` criados no mesmo trigger, todos
-agendados a partir do mesmo `t0`).
+One voice per note (3 `osc → g → sfxBus` pairs created in the same trigger, all
+scheduled from the same `t0`).
 
-### 10.2 Notas
+### 10.2 Notes
 
-| Nota | Frequência | Início (rel. t0) | Fim do envelope | `stop()` |
+| Note | Frequency | Start (rel. t0) | Envelope end | `stop()` |
 |------|-----------|-------------------|-----------------|----------|
 | 1 | 523 Hz | 0.000 | +0.070 | +0.080 |
 | 2 | 659 Hz | 0.080 | +0.150 | +0.160 |
 | 3 | 784 Hz | 0.160 | +0.230 | +0.240 |
 
-Envelope idêntico por nota (tempos relativos ao início `tn` da nota):
+Identical envelope per note (times relative to the note's start `tn`):
 
-| Tempo (rel. tn) | Alvo | Método | Valor |
+| Time (rel. tn) | Target | Method | Value |
 |------------------|------|--------|-------|
-| 0 | osc.frequency | setValueAtTime | (freq da nota) |
+| 0 | osc.frequency | setValueAtTime | (note freq) |
 | 0 | g.gain | setValueAtTime | 0 |
 | +0.004 | g.gain | linearRampToValueAtTime | 0.25 |
 | +0.070 | g.gain | linearRampToValueAtTime | 0 |
 
-- Cada `osc.start(tn)`, `osc.stop(tn + 0.08)`. Todos type `'square'`.
-- **Duração total: 240 ms.**
+- Each `osc.start(tn)`, `osc.stop(tn + 0.08)`. All type `'square'`.
+- **Total duration: 240 ms.**
 
 ---
 
-## 11. UI_START — blip de confirmação do start
+## 11. UI_START — start confirmation blip
 
-One-shot polifônico simples, tocado ao iniciar partida (antes de `startEngine`).
+Simple polyphonic one-shot, played when starting the match (before `startEngine`).
 
-### 11.1 Grafo
+### 11.1 Graph
 
 ```
 osc (square, 880 Hz) → g → sfxBus
 ```
 
-### 11.2 Automação
+### 11.2 Automation
 
-| Tempo (rel. t0) | Alvo | Método | Valor |
+| Time (rel. t0) | Target | Method | Value |
 |------------------|------|--------|-------|
 | 0 | osc.frequency | setValueAtTime | 880 |
 | 0 | g.gain | setValueAtTime | 0 |
 | +0.003 | g.gain | linearRampToValueAtTime | 0.20 |
 | +0.060 | g.gain | linearRampToValueAtTime | 0 |
 
-- `osc.start(t0)`, `osc.stop(t0 + 0.07)`. **Duração: 70 ms.**
+- `osc.start(t0)`, `osc.stop(t0 + 0.07)`. **Duration: 70 ms.**
 
 ---
 
-## 12. Resumo executável (tabela mestre)
+## 12. Executable summary (master table)
 
-| # | Som | Fontes | Filtro | Pitch | Pico | Duração | Voz |
+| # | Sound | Sources | Filter | Pitch | Peak | Duration | Voice |
 |---|-----|--------|--------|-------|------|---------|-----|
-| 1 | ENGINE | 2× square + noise loop + LFO 27 Hz | bandpass 400 Hz Q0.5 (só no ruído) | 40→90 Hz (f=40+25v), 2º osc em 2f | 0.22 ±0.03 | ∞ | singleton |
-| 2 | SHOT | square | — | 1400→400 Hz exp em 90 ms | 0.30 | 100 ms | poli (guarda 50 ms) |
-| 3 | EXPLOSION_SMALL | noise | lowpass 4500→400 Hz Q0.7 (rev. 2026-07-11) | — | 0.62 | 400 ms | poli |
-| 4 | EXPLOSION_BIG | noise + square | lowpass 2400→200 Hz Q0.7 (rev. 2026-07-11) | corpo 60→40 Hz | 0.65 + 0.35 | 750 ms | poli |
-| 5 | REFUEL | square | — | 200+500·nível Hz por blip | 0.22 | 70 ms/blip, tick 100 ms | singleton retrigável |
-| 6 | FUEL BAIXO | square + LFO 2.7778 Hz | — | 800 Hz fixo, gate 180/180 ms | 0.18 | ∞ enquanto on | singleton on/off |
-| 7 | EXTRA_LIFE | 3× square | — | 523 / 659 / 784 Hz | 0.25/nota | 240 ms | poli |
-| 8 | UI_START | square | — | 880 Hz | 0.20 | 70 ms | poli |
+| 1 | ENGINE | 2× square + noise loop + LFO 27 Hz | bandpass 400 Hz Q0.5 (noise only) | 40→90 Hz (f=40+25v), 2nd osc at 2f | 0.22 ±0.03 | ∞ | singleton |
+| 2 | SHOT | square | — | 1400→400 Hz exp in 90 ms | 0.30 | 100 ms | poly (50 ms guard) |
+| 3 | EXPLOSION_SMALL | noise | lowpass 4500→400 Hz Q0.7 (rev. 2026-07-11) | — | 0.62 | 400 ms | poly |
+| 4 | EXPLOSION_BIG | noise + square | lowpass 2400→200 Hz Q0.7 (rev. 2026-07-11) | body 60→40 Hz | 0.65 + 0.35 | 750 ms | poly |
+| 5 | REFUEL | square | — | 200+500·level Hz per blip | 0.22 | 70 ms/blip, tick 100 ms | retriggerable singleton |
+| 6 | LOW FUEL | square + LFO 2.7778 Hz | — | 800 Hz fixed, gate 180/180 ms | 0.18 | ∞ while on | singleton on/off |
+| 7 | EXTRA_LIFE | 3× square | — | 523 / 659 / 784 Hz | 0.25/note | 240 ms | poly |
+| 8 | UI_START | square | — | 880 Hz | 0.20 | 70 ms | poly |
 
 Master: `sfxBus(1.0) → compressor(−12 dB, 6:1) → muteGain(1|0) → masterGain(0.5) → destination`.
 
 ---
 
-## 13. Critérios de aceitação (checklist de verificação manual)
+## 13. Acceptance criteria (manual verification checklist)
 
-1. Nenhuma requisição de rede para áudio; DevTools → Network vazio de mídia.
-2. Primeiro toque/tecla em iOS Safari e Android Chrome desbloqueia o som; o
-   start do jogo já toca `uiStart` + motor sem gesto adicional.
-3. Motor: ronco grave contínuo; segurar ↑ sobe o pitch de forma audível e
-   percorre ~1 oitava (40→90 Hz); soltar volta ao cruzeiro; ↓ desce.
-   Em alto-falante de celular o ronco continua audível (harmônico 2f).
-4. Tiro: "tsiu" curto e seco; metralhar Espaço não produz cliques nem
-   sobreposição caótica (guarda de 50 ms + limite de 1 míssil do jogo).
-5. Explosão de inimigo claramente mais curta/aguda que a da ponte/morte;
-   a grande tem "peso" de subgrave.
-6. Reabastecendo: blips a 10 Hz com pitch subindo de ~200 até ~700 Hz conforme
-   o medidor E→F; param imediatamente ao sair do depósito.
-7. Alarme de fuel: bipes de 800 Hz, ritmo regular 180 ms on / 180 ms off;
-   some ao reabastecer acima de 25% e na morte.
-8. Vida extra em 10.000 pts: arpejo ascendente de 3 notas, ~¼ s.
-9. Tecla P congela TODO o áudio instantaneamente (inclusive alarme e motor) e
-   retoma do mesmo ponto; tecla M silencia/dessilencia em <20 ms sem clique e o
-   estado sobrevive a reload (localStorage).
-10. Morte: motor faz fade-out de ~80 ms sob a explosão grande; após respawn o
-    motor religa sozinho.
-11. Sessão longa (5+ min com muitos tiros/explosões): sem acúmulo de nós
-    (verificável via `about:tracing`/heap — contagem de AudioNodes estável),
-    sem distorção por clipping mesmo com motor + alarme + explosão + jingle
-    simultâneos.
+1. No network requests for audio; DevTools → Network empty of media.
+2. First tap/key on iOS Safari and Android Chrome unlocks the sound; the
+   game start already plays `uiStart` + engine with no additional gesture.
+3. Engine: continuous low drone; holding ↑ raises the pitch audibly and
+   spans ~1 octave (40→90 Hz); releasing returns to cruise; ↓ lowers it.
+   On a phone speaker the drone stays audible (2f harmonic).
+4. Shot: short, dry "tsiu"; machine-gunning Space produces no clicks or
+   chaotic overlap (50 ms guard + the game's 1-missile limit).
+5. Enemy explosion clearly shorter/higher than the bridge/death one;
+   the big one has sub-bass "weight".
+6. Refueling: blips at 10 Hz with pitch rising from ~200 to ~700 Hz as
+   the gauge goes E→F; they stop immediately on leaving the depot.
+7. Fuel alarm: 800 Hz beeps, regular rhythm 180 ms on / 180 ms off;
+   disappears when refueling above 25% and on death.
+8. Extra life at 10,000 pts: ascending 3-note arpeggio, ~¼ s.
+9. P key freezes ALL audio instantly (including alarm and engine) and
+   resumes from the same point; M key mutes/unmutes in <20 ms without a click and the
+   state survives a reload (localStorage).
+10. Death: the engine fades out over ~80 ms under the big explosion; after respawn the
+    engine restarts on its own.
+11. Long session (5+ min with many shots/explosions): no accumulation of nodes
+    (verifiable via `about:tracing`/heap — stable AudioNodes count),
+    no distortion from clipping even with engine + alarm + explosion + jingle
+    simultaneously.
 
 ---
 
-## 14. Fora de escopo (decisões fechadas por omissão)
+## 14. Out of scope (decisions closed by omission)
 
-- **Sem música** de fundo, de título ou de game over — fidelidade ao original.
-- **Sem sons por inimigo** (heli/jato/navio não emitem som próprio ao se mover).
-- **Sem som de colisão com margem** distinto — colisão fatal usa `explosionBig`.
-- **Sem panning estéreo, reverb, delay ou pitch aleatório** por disparo.
-- A lista de sons deste documento é **fechada**: qualquer som novo exige
-  revisão desta spec, não improviso na implementação.
+- **No music** — background, title, or game over — fidelity to the original.
+- **No per-enemy sounds** (heli/jet/ship emit no sound of their own when moving).
+- **No dedicated riverbank-collision sound** — a fatal collision uses `explosionBig`.
+- **No stereo panning, reverb, delay, or random pitch** per trigger.
+- The list of sounds in this document is **closed**: any new sound requires
+  a revision of this spec, not improvisation in the implementation.

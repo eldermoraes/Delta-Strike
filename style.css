@@ -12,7 +12,7 @@ body {
 #screen {
   display: block;
   image-rendering: pixelated;
-  image-rendering: crisp-edges; /* fallback Firefox antigo */
+  image-rendering: crisp-edges; /* fallback for old Firefox */
   background: #000;
 }
 .hint {
