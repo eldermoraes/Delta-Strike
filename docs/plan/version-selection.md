@@ -9,3 +9,5 @@ Visual direction: aviation blue (#142b3a), river teal (#67b8ae), signal orange (
 The 3D build produces a standalone combined site at its existing preview URL: selection, classic game, 3D game and local assets. A Vite plugin serves the same selection/classic files during development. Root static hosting also works after building 3D. Root service-worker cache is versioned and restricted to classic/selection assets, leaving 3D bundles to the network. Existing browser tests target the explicit 3D entry. Navigation tests cover both editions, back links and mobile overflow.
 
 > Revision 2026-09-08: online document navigation must fetch the latest published HTML (bypassing HTTP cache), updating the offline copy. Offline navigation retains the last successful page. This prevents old classic-only home pages persisting after releases.
+
+> Revision 2026-09-08: add original fighter-and-river home-screen artwork, explicit Apple touch icons on every entry, and 192/512 PNG plus maskable Android icons. The installed app now starts at the shared selection with unrestricted orientation.

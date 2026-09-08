@@ -1,6 +1,6 @@
 /* DELTA STRIKE — service worker */
 'use strict';
-var CACHE = 'delta-strike-v9';   // bump manually on every release: -v2, -v3…
+var CACHE = 'delta-strike-v10';   // bump manually on every release: -v2, -v3…
 var ASSETS = [
   './',
   './index.html',
@@ -16,6 +16,10 @@ var ASSETS = [
   './js/river.js',
   './js/entities.js',
   './js/game.js',
+  './icons/delta-strike-192.png',
+  './icons/delta-strike-512.png',
+  './icons/delta-strike-maskable-512.png',
+  './icons/apple-touch-icon.png',
   './icons/icon-192.png',
   './icons/icon-512.png'
 ];

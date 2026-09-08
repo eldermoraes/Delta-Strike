@@ -103,6 +103,6 @@ These inform the mechanics; all 3D art remains original. The arrow keys use airc
 
 The root project owns `index.html`, `classic.html` and `selection/`. The Vite build packages these and the original 2D scripts into `dist/` alongside `3d.html`, producing one standalone site. `npm run preview -- --port 4173` serves both editions at the same URL. Deploy the **entire contents of dist**, not only the 3D bundles. Root static serving also works after building, linking to `Delta-Strike-3d/dist/3d.html`.
 
-Selection images are original captures of both games. The selection and classic game are cached offline; 3D retains its existing network loading behavior. An installed classic PWA starts directly at `classic.html`. In either edition, use Versions / Versões to return to the selector.
+Selection images are original captures of both games. The selection and classic game are cached offline; 3D retains its existing network loading behavior. New installations start at the shared edition selector. In either edition, use Versions / Versões to return to the selector.
 
 The production `dist/` folder is committed because the existing GitHub Pages site serves the repository directly. Rebuild and commit it whenever releasing 3D changes.
