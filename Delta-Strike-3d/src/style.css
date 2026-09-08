@@ -1149,3 +1149,13 @@ body.flying nav {
 .touch-instructions > div:last-child {
   grid-column: 1 / -1;
 }
+
+/* Holding flight controls must never start browser text selection or iOS callouts. */
+button,
+button *,
+#hud,
+#hud * {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}

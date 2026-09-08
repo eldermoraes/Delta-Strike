@@ -26,3 +26,7 @@ Desktop and smartphone playtesting found audio too quiet. Increase master gain f
 ## Combat and touch revision — 2026-09-08
 
 Enemy shots predict the interception point from current aircraft velocity and then travel straight, allowing evasive maneuvers. Collision sweeps use relative aircraft/projectile motion. Touch stick forward means dive, backward means climb. Briefing uses coarse-pointer detection to show touch instructions; desktop retains keyboard controls.
+
+## Touch hold revision — 2026-09-08
+
+Disable text selection and iOS touch callouts on buttons and the flight HUD. Cancel context-menu and selection-start events on joystick and action controls; retain pointer capture, release/cancellation behavior, multitouch and scrollable instructions.

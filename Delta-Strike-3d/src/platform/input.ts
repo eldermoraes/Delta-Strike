@@ -33,6 +33,10 @@ export class Controls {
     missile: HTMLElement,
     boost: HTMLElement,
   ) {
+    for (const element of [stick, fire, missile, boost]) {
+      for (const event of ['contextmenu', 'selectstart'])
+        element.addEventListener(event, (e) => e.preventDefault());
+    }
     const reset = () => {
       this.touch.x = 0;
       this.touch.y = 0;
