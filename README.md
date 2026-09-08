@@ -88,3 +88,16 @@ DELTA STRIKE.
 ## License
 
 Apache 2.0 — see [LICENSE](LICENSE).
+
+## Shared 2D / 3D entrance
+
+The local root page now offers a choice of editions. The original game is at `classic.html`; its gameplay code is unchanged. Build the 3D edition before using the shared entrance:
+
+```sh
+cd Delta-Strike-3d
+npm install
+npm run build
+npm run preview -- --port 4173
+```
+
+Open `http://127.0.0.1:4173/` to choose either game. The complete deployable site is in `Delta-Strike-3d/dist/`. Publishing this new entrance requires deploying that complete build; local changes do not update the live site automatically.
