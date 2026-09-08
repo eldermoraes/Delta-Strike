@@ -18,3 +18,7 @@ Requested after the first playable version: substantially longer play with a dis
 Tests cover fork geometry and seams, spawn clearance, capped late difficulty, continued progression after bridge three, million-point finish, extra-life farming, crossing-jet speed, checkpoint round trips and corruption, persistent fuel, and ordinary-control navigation through the first three forks/bridges. Browser tests cover inverted arrows, reload/continue, and bounded rendering hundreds of bridges upstream.
 
 The previous design.md records the initial version. This document supersedes its three-sector mission length and full resupply at every checkpoint.
+
+## Audio revision — 2026-09-08
+
+Desktop and smartphone playtesting found audio too quiet. Increase master gain from 0.22 to 1 (+13 dB before compression), retain mute behavior, and use gentle peak compression for overlapping effects. Increase engine low-pass cutoff to 500 Hz, cannon pitch to 320–90 Hz, and explosion cutoff to 1500 Hz for audibility on smaller speakers. Validate rendered audio levels and simultaneous effects; physical-device loudness still needs user playtesting.
