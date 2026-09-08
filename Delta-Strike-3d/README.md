@@ -35,7 +35,7 @@ Open the local address printed by Vite, normally `http://127.0.0.1:5173`. The en
 
 Flight is assisted: banking changes heading, pitch changes altitude, and releasing the controls gradually levels the aircraft. Heading is limited to the downriver flight envelope. This is an arcade river mission, not a free-roaming flight simulator.
 
-Touch screens have a drag joystick and fire, missile, and boost buttons. On a standard controller, use the left stick to fly, right trigger for cannons, A for missiles, and left trigger for boost. Pause with the on-screen button. Controller input is implemented but has not been tested with physical hardware.
+On touch screens, push the stick forward (up) to dive and pull back (down) to climb. Instructions adapt to touch devices. Touch screens have a drag joystick and fire, missile, and boost buttons. On a standard controller, use the left stick to fly, right trigger for cannons, A for missiles, and left trigger for boost. Pause with the on-screen button. Controller input is implemented but has not been tested with physical hardware.
 
 ## Your mission
 

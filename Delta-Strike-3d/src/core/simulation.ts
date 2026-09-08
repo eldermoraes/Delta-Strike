@@ -367,13 +367,37 @@ export class Simulation {
         e.pos.y = Math.max(e.flightAltitude, groundHeight(e.pos.x, -e.pos.z) + 7);
       }
       e.cooldown -= dt;
-      if (e.kind !== 'jet' && dist < 290 && dist > 35 && e.cooldown <= 0) {
+      if (e.kind !== 'jet' && e.pos.z < p.pos.z && dist < 290 && dist > 35 && e.cooldown <= 0) {
         e.cooldown = 3.5 - difficulty * 1.7;
-        const aim = {
-          x: (p.pos.x - e.pos.x) / dist,
-          y: (p.pos.y - e.pos.y) / dist,
-          z: (p.pos.z - e.pos.z) / dist,
+        // Aim at an intercept using the velocity observed this step. Projectiles
+        // keep this direction after launch, so changing course still dodges them.
+        const velocity = {
+          x: (p.pos.x - p.previous.x) / dt,
+          y: (p.pos.y - p.previous.y) / dt,
+          z: (p.pos.z - p.previous.z) / dt,
         };
+        const offset = { x: p.pos.x - e.pos.x, y: p.pos.y - e.pos.y, z: p.pos.z - e.pos.z };
+        const a = velocity.x ** 2 + velocity.y ** 2 + velocity.z ** 2 - 100 ** 2;
+        const b = 2 * (offset.x * velocity.x + offset.y * velocity.y + offset.z * velocity.z);
+        const c = offset.x ** 2 + offset.y ** 2 + offset.z ** 2;
+        const discriminant = b * b - 4 * a * c;
+        const times =
+          Math.abs(a) < 0.001
+            ? Math.abs(b) > 0.001
+              ? [-c / b]
+              : []
+            : discriminant >= 0
+              ? [(-b - Math.sqrt(discriminant)) / (2 * a), (-b + Math.sqrt(discriminant)) / (2 * a)]
+              : [];
+        const intercept = Math.min(...times.filter((t) => t > 0 && t < 4));
+        const lead = Number.isFinite(intercept) ? intercept : 0;
+        const target = {
+          x: offset.x + velocity.x * lead,
+          y: offset.y + velocity.y * lead,
+          z: offset.z + velocity.z * lead,
+        };
+        const length = Math.hypot(target.x, target.y, target.z) || 1;
+        const aim = { x: target.x / length, y: target.y / length, z: target.z / length };
         this.bullets.push({
           id: this.nextId++,
           pos: { ...e.pos },
@@ -501,7 +525,20 @@ export class Simulation {
       if (b.enemy) {
         if (
           this.player.invulnerable === 0 &&
-          segmentBox(b.previous, b.pos, this.player.pos, { x: 3.5, y: 2, z: 4.5 }) !== null
+          segmentBox(
+            {
+              x: b.previous.x - this.player.previous.x,
+              y: b.previous.y - this.player.previous.y,
+              z: b.previous.z - this.player.previous.z,
+            },
+            {
+              x: b.pos.x - this.player.pos.x,
+              y: b.pos.y - this.player.pos.y,
+              z: b.pos.z - this.player.pos.z,
+            },
+            { x: 0, y: 0, z: 0 },
+            { x: 3.5, y: 2, z: 4.5 },
+          ) !== null
         ) {
           b.life = 0;
           this.damagePlayer(17, 'Enemy fire');

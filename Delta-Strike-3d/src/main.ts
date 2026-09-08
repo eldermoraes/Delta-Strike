@@ -70,13 +70,14 @@ function showPanel(name: string) {
     focusReturn = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   panel = name;
   $('overlay').hidden = !name;
+  $('overlay').scrollTop = 0;
   for (const id of ['pause', 'result', 'briefing', 'settings', 'error'])
     $(id + '-panel').hidden = id !== name;
   if (name)
     requestAnimationFrame(() =>
       $(name + '-panel')
         .querySelector<HTMLButtonElement>('button')
-        ?.focus(),
+        ?.focus({ preventScroll: true }),
     );
   else focusReturn?.focus({ preventScroll: true });
 }

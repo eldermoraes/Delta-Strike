@@ -40,7 +40,7 @@ it('restores checkpoint score and permits completion of all three sectors', () =
     expect(s.sector).toBe(sector + 1);
   }
 });
-it('a pilot can follow the left fork and refuel through the first three bridges with ordinary controls', () => {
+it('a pilot can follow the left fork and refuel through the first three bridges with ordinary controls and evasive climbs', () => {
   const s = new Simulation();
   s.start();
   for (let frame = 0; frame < 60 * 180 && s.phase === 'playing' && s.sector < 3; frame++) {
@@ -55,7 +55,15 @@ it('a pilot can follow the left fork and refuel through the first three bridges 
     s.step(1 / 60, {
       ...NEUTRAL,
       roll,
-      pitch: clamp((18 - p.pos.y) * 0.06, -1, 1),
+      pitch: clamp(
+        ((s.bullets.some((b) => b.enemy && Math.abs(b.pos.z - p.pos.z) < 100)
+          ? 32 + 12 * Math.sin(s.time * 3)
+          : 18) -
+          p.pos.y) *
+          0.12,
+        -1,
+        1,
+      ),
       fire: !s.entities.some(
         (e) =>
           e.kind === 'fuel' &&

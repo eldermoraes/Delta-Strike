@@ -22,3 +22,7 @@ The previous design.md records the initial version. This document supersedes its
 ## Audio revision — 2026-09-08
 
 Desktop and smartphone playtesting found audio too quiet. Increase master gain from 0.22 to 1 (+13 dB before compression), retain mute behavior, and use gentle peak compression for overlapping effects. Increase engine low-pass cutoff to 500 Hz, cannon pitch to 320–90 Hz, and explosion cutoff to 1500 Hz for audibility on smaller speakers. Validate rendered audio levels and simultaneous effects; physical-device loudness still needs user playtesting.
+
+## Combat and touch revision — 2026-09-08
+
+Enemy shots predict the interception point from current aircraft velocity and then travel straight, allowing evasive maneuvers. Collision sweeps use relative aircraft/projectile motion. Touch stick forward means dive, backward means climb. Briefing uses coarse-pointer detection to show touch instructions; desktop retains keyboard controls.

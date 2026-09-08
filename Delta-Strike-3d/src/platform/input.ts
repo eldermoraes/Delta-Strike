@@ -51,7 +51,7 @@ export class Controls {
       const dx = clamp(e.clientX - this.origin.x, -45, 45),
         dy = clamp(e.clientY - this.origin.y, -45, 45);
       this.touch.x = dx / 45;
-      this.touch.y = -dy / 45;
+      this.touch.y = dy / 45;
       knob.style.transform = `translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`;
     });
     stick.addEventListener('pointerup', reset);

@@ -649,7 +649,7 @@ body.flying nav {
   inset: 0;
   z-index: 20;
   display: grid;
-  place-items: center;
+  place-items: safe center;
   background: rgba(12, 31, 35, 0.62);
   backdrop-filter: blur(9px);
   padding: 20px;
@@ -1128,4 +1128,24 @@ body.flying nav {
     font-size: 12px;
     text-decoration: none;
   }
+}
+
+.touch-instructions {
+  display: none;
+}
+@media (pointer: coarse) {
+  .keyboard-instructions {
+    display: none;
+  }
+  .touch-instructions {
+    display: grid;
+  }
+}
+
+.touch-instructions p {
+  font-size: 12px;
+  line-height: 1.7;
+}
+.touch-instructions > div:last-child {
+  grid-column: 1 / -1;
 }
