@@ -1,6 +1,6 @@
 /* DELTA STRIKE — service worker */
 'use strict';
-var CACHE = 'delta-strike-v8';   // bump manually on every release: -v2, -v3…
+var CACHE = 'delta-strike-v9';   // bump manually on every release: -v2, -v3…
 var ASSETS = [
   './',
   './index.html',
@@ -50,6 +50,24 @@ self.addEventListener('fetch', function (e) {
     return new URL(asset, self.registration.scope).pathname === url.pathname;
   });
   if (url.origin !== self.location.origin || !allowed) return;
+  // Online navigation must not remain pinned to an older edition's home page.
+  if (e.request.mode === 'navigate') {
+    e.respondWith(
+      fetch(e.request, { cache: 'no-store' }).then(function (response) {
+        if (!response.ok) throw new Error('Page temporarily unavailable');
+        var copy = response.clone();
+        e.waitUntil(caches.open(CACHE).then(function (cache) {
+          return cache.put(url.origin + url.pathname, copy);
+        }).catch(function () {}));
+        return response;
+      }).catch(function () {
+        return caches.match(e.request, { ignoreSearch: true }).then(function (cached) {
+          return cached || Response.error();
+        });
+      })
+    );
+    return;
+  }
   e.respondWith(
     caches.match(e.request, { ignoreSearch: true }).then(function (r) {
       return r || fetch(e.request);
