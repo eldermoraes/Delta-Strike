@@ -35,12 +35,13 @@ Open the local address printed by Vite, normally `http://127.0.0.1:5173`. The en
 
 Flight is assisted: banking changes heading, pitch changes altitude, and releasing the controls gradually levels the aircraft. Heading is limited to the downriver flight envelope. This is an arcade river mission, not a free-roaming flight simulator.
 
-On touch screens, push the stick forward (up) to dive and pull back (down) to climb. Instructions adapt to touch devices. Touch screens have a drag joystick and fire, missile, and boost buttons. On a standard controller, use the left stick to fly, right trigger for cannons, A for missiles, and left trigger for boost. Pause with the on-screen button. Controller input is implemented but has not been tested with physical hardware.
+On touch screens, push the stick forward (up) to dive and pull back (down) to climb. Instructions adapt to touch devices. Touch screens have a drag joystick and fire, missile, and boost buttons. On a standard controller, use the left stick to fly, right trigger for cannons, A for missiles, and left trigger for boost. Holding touch controls blocks browser text selection and long-press menus; joystick and action buttons work together. Pause with the on-screen button. Controller input is implemented but has not been tested with physical hardware.
 
 ## Your mission
 
 - There is no three-sector limit. New river sections continue until **1,000,000 points**, when the scoreboard becomes **!!!!!!** and the expedition ends. Expect a long score chase rather than a short mission; duration depends on speed, targets destroyed and retries.
 - Long raised islands split the river into left and right channels that rejoin downstream. Tight passages, different fuel routes, patrolling boats and helicopters, and fast transverse jets make each section matter.
+- Enemy fire predicts the aircraft’s movement when fired, then follows a straight trajectory. Change course to evade; enemy shots use relative swept collision against the moving aircraft.
 - Bring targets near the crosshair to acquire a lock. Cannons have a small aim assist cone; missiles home toward locked targets.
 - Destroy the marked **bridge control tower** before leaving each sector. Its bridge is a real collision obstacle until destroyed.
 - Fly through **green fuel rings below 23 m** to refuel and repair your hull. Shooting a fuel depot destroys it, so choose your firing line carefully.
@@ -73,7 +74,7 @@ npm run test:browser
 npm run preview
 ```
 
-The browser checks cover model loading, launch, climb controls, inverted arrow keys, firing, pause/resume, restart, preferences, briefing, mobile layout, persistent checkpoint resume and distant terrain streaming. A simulation test navigates the left forks and refuels through the first three bridges using ordinary control inputs. The million-point finish and corrupt save rejection have separate regression tests. Screenshots are saved in `art/`.
+The browser checks cover model loading, launch, climb controls, inverted arrow keys, firing, pause/resume, restart, preferences, briefing, mobile layout, persistent checkpoint resume and distant terrain streaming. A simulation test navigates the left forks and refuels through the first three bridges using ordinary control inputs and evasive climbs. Enemy-fire tests verify both hits on a steady course and successful evasive maneuvers. Touch tests cover device-specific instructions, pitch direction and holding fire and boost together. The million-point finish and corrupt save rejection have separate regression tests. Screenshots are saved in `art/`.
 
 The production build is in `dist/` and uses relative asset URLs so it can be served from a subdirectory. The shared entrance installs a service worker for the selector and classic assets only. A web server is required; opening `index.html` directly from the filesystem will not work.
 
@@ -97,12 +98,16 @@ License: Apache 2.0, matching the original project.
 - [Ending discussion supplied by the user](https://www.youtube.com/watch?v=clfkbhibIUY): includes large islands dividing the river and discussion of the distant ending.
 - [Original Activision manual, archived at AtariAge](https://atariage.com/manual_html_page.php?SoftwareLabelID=409): the one-million-point exclamation mark scoreboard, extra aircraft at 10,000 points, and increasingly important fuel management.
 
-These inform the mechanics; all 3D art remains original. The arrow keys use aircraft-style pitch (push up to dive, pull down to climb); WASD and touch retain the first version's direction mapping.
+These inform the mechanics; all 3D art remains original. The arrow keys use aircraft-style pitch (push up to dive, pull down to climb); W/S retain their original mapping. Touch follows the aircraft-style mapping too: push forward to dive and pull back to climb.
+
+## Audio
+
+Synthesized effects use full master gain, increased midrange presence for small speakers, and compression to control overlapping peaks. Sound can be muted from the HUD or Settings; the preference is saved locally.
 
 ## Shared version selector
 
 The root project owns `index.html`, `classic.html` and `selection/`. The Vite build packages these and the original 2D scripts into `dist/` alongside `3d.html`, producing one standalone site. `npm run preview -- --port 4173` serves both editions at the same URL. Deploy the **entire contents of dist**, not only the 3D bundles. Root static serving also works after building, linking to `Delta-Strike-3d/dist/3d.html`.
 
-Selection images are original captures of both games. The selection and classic game are cached offline; 3D retains its existing network loading behavior. New installations start at the shared edition selector. In either edition, use Versions / Versões to return to the selector.
+Selection images are original captures of both games. The selection and classic game are cached offline; 3D retains its existing network loading behavior. New installations start at the shared edition selector. In either edition, use Versions to return to the selector.
 
 The production `dist/` folder is committed because the existing GitHub Pages site serves the repository directly. Rebuild and commit it whenever releasing 3D changes.
