@@ -10,9 +10,9 @@ private — Pro account).
 
 ## This project's process (Elder's request — always keep)
 
-- **Fable plans and monitors; Opus implements.** Every design or value change
+- **The main session plans and monitors; subagents implement.** Every design or value change
   goes through the specs in `docs/plan/` first (the code follows the specs),
-  then an Opus agent transcribes/implements, and the result is validated in the
+  then a subagent transcribes/implements, and the result is validated in the
   browser before the commit.
 - `docs/plan/interfaces.md` is the final contract — it wins over any other doc.
   `js/constants.js` is a VERBATIM transcription of that doc's §2 block: edit the
