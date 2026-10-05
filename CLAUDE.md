@@ -1,17 +1,19 @@
 # CLAUDE.md — Delta Strike
 
 Atari 2600-style browser game (vertical-scrolling river shooter, an original
-tribute to the classic 1982 genre), in vanilla JS + Canvas 2D, a 100% offline
-PWA. No build, no dependencies, no frameworks. Live at
+tribute to the classic 1982 genre) in two editions behind a shared selection
+page: Classic 2D (`classic.html`, vanilla JS + Canvas 2D, no build, offline
+PWA) and 3D (`Delta-Strike-3d/`, TypeScript + Vite, compiled into
+`Delta-Strike-3d/dist/`, needs the network). Live at
 https://eldermoraes.github.io/Delta-Strike/ (GitHub Pages; the repo may stay
 private — Pro account).
 
 ## This project's process (Elder's request — always keep)
 
 - **Fable plans and monitors; Opus implements.** Every design or value change
-  goes through the specs in `docs/plan/` first (the docs are LAW), then an Opus
-  agent transcribes/implements, and the result is validated in the browser
-  before the commit.
+  goes through the specs in `docs/plan/` first (the code follows the specs),
+  then an Opus agent transcribes/implements, and the result is validated in the
+  browser before the commit.
 - `docs/plan/interfaces.md` is the final contract — it wins over any other doc.
   `js/constants.js` is a VERBATIM transcription of that doc's §2 block: edit the
   doc first, never the file directly.
@@ -20,6 +22,10 @@ private — Pro account).
   already in use: "> Revision YYYY-MM-DD: ...").
 
 ## Code rules
+
+These rules cover the classic 2D edition (`js/`, `classic.html`, `sw.js`). The
+3D edition in `Delta-Strike-3d/` is TypeScript + Vite with ES modules; follow
+its own `README.md` and tooling there.
 
 - Classic scripts in an IIFE with `'use strict'`; single namespace `window.DS`.
 - Load order: `constants → sprites → audio → river → entities → game`.
@@ -37,10 +43,13 @@ private — Pro account).
 1. **Bump the cache** in `sw.js` (`delta-strike-vN` → `vN+1`) on every release
    that changes a cached file. The precache uses `cache: 'reload'` (immune to the
    Pages `max-age=600`).
-2. Commit + push to `main` → Pages builds on its own (~30 s).
-3. Verify in production by the SERVED CONTENT (`curl` the changed file) — the
+2. Rebuild 3D (`cd Delta-Strike-3d && npm run build`) whenever its source or a
+   shared file copied into the bundle changed, so `dist/` and `dist/sw.js` match.
+3. Commit the source and the updated `Delta-Strike-3d/dist/` together, push to
+   `main` → Pages serves the committed files (~30 s).
+4. Verify in production by the SERVED CONTENT (`curl` the changed file) — the
    builds API status may answer for the previous build.
-4. The player gets the update on the 2nd reload (cache-first + skipWaiting); on
+5. The player gets the update on the 2nd reload (cache-first + skipWaiting); on
    the installed PWA: close and reopen the app twice.
 
 ## Run and test
